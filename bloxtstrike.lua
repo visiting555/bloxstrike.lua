@@ -4,9 +4,6 @@ else
     getgenv().ProtectGui = function(g) pcall(function() g.Parent = game:GetService("CoreGui") end) end
 end
 
-local bypass
-bypass = hookfunction(debug.getupvalue, function(...) return true end)
-
 local ESP = {
     enabled = false,
     box = false,
@@ -313,13 +310,13 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 end)
 
 local function CreatePasswordMenu(onSuccess)
-    for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name == "NebulaPasswordMenu" then g:Destroy() end end
+    for _,g in ipairs((game:GetService("CoreGui"):GetChildren())) do if g.Name == "NebulaPasswordMenu" then g:Destroy() end end
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "NebulaPasswordMenu"
     ProtectGui(gui)
     gui.Enabled = true
-    
+
     local frame = Instance.new("Frame",gui)
     frame.Position = UDim2.new(0.37,0,0.36,0)
     frame.Size = UDim2.new(0,290,0,161)
@@ -415,78 +412,88 @@ local function CreatePasswordMenu(onSuccess)
 end
 
 local function CreateMenu()
-    for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name == "NebulaBloxstrikeMenu" then g:Destroy() end end
-
+    for _,g in ipairs(game:GetService("CoreGui"):GetChildren()) do if g.Name == "NebulaBloxstrikeMenu" then g:Destroy() end end
     local gui = Instance.new("ScreenGui")
     gui.Name = "NebulaBloxstrikeMenu"
     ProtectGui(gui)
     gui.Enabled = true
 
     local main = Instance.new("Frame",gui)
-    main.Position = UDim2.new(0.25,0,0.14,0)
-    main.Size = UDim2.new(0,440,0,495)
-    main.BackgroundColor3 = Color3.fromRGB(24,26,46)
+    main.Position = UDim2.new(0.32,0,0.11,0)
+    main.Size = UDim2.new(0,470,0,510)
+    main.BackgroundColor3 = Color3.fromRGB(14,18,29)
     main.BorderSizePixel = 0
-    main.Name = "Main"
+    main.Name = "MainNebula"
     main.Active = true
     main.Draggable = true
 
     local bar = Instance.new("Frame", main)
-    bar.Size = UDim2.new(1,0,0,41)
+    bar.Size = UDim2.new(1,0,0,46)
     bar.Position = UDim2.new(0,0,0,0)
-    bar.BackgroundColor3 = Color3.fromRGB(30,52,80)
+    bar.BackgroundColor3 = Color3.fromRGB(22,30,68)
     bar.BorderSizePixel = 0
 
     local title = Instance.new("TextLabel", main)
-    title.Size = UDim2.new(1,0,0,39)
-    title.Position = UDim2.new(0,0,0,2)
+    title.Size = UDim2.new(1,0,0,46)
+    title.Position = UDim2.new(0,0,0,0)
     title.Text = "[NEBULA] BLOXSTRIKE HİLE MENÜSÜ"
     title.Font = Enum.Font.FredokaOne
     title.TextColor3 = Color3.fromRGB(0,255,255)
+    title.TextSize = 21
     title.BackgroundTransparency = 1
 
     local close = Instance.new("TextButton",main)
-    close.Size = UDim2.new(0,27,0,27)
-    close.Position = UDim2.new(1,-31,0,7)
+    close.Size = UDim2.new(0,33,0,33)
+    close.Position = UDim2.new(1,-39,0,7)
     close.Text = "✕"
     close.Font = Enum.Font.FredokaOne
     close.TextColor3 = Color3.fromRGB(255,40,46)
-    close.TextSize = 24
-    close.BackgroundColor3 = Color3.fromRGB(32,24,38)
+    close.TextSize = 28
+    close.BackgroundColor3 = Color3.fromRGB(34,24,38)
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false end)
 
-    local t1 = Instance.new("TextLabel",main)
-    t1.Text = "ESP"
-    t1.Font = Enum.Font.FredokaOne
-    t1.TextColor3 = Color3.fromRGB(0,255,255)
-    t1.TextSize = 19
-    t1.Position = UDim2.new(0.05,0,0,60)
-    t1.Size = UDim2.new(0,85,0,23)
-    t1.BackgroundTransparency = 1
+    local sep1 = Instance.new("Frame",main)
+    sep1.Size = UDim2.new(0,3,0.8,0)
+    sep1.Position = UDim2.new(0.5,-2,0.11,0)
+    sep1.BackgroundColor3 = Color3.fromRGB(24,180,225)
+    sep1.BorderSizePixel = 0
 
-    local t2 = Instance.new("TextLabel",main)
-    t2.Text = "AIMBOT"
-    t2.Font = Enum.Font.FredokaOne
-    t2.TextColor3 = Color3.fromRGB(0,255,175)
-    t2.TextSize = 19
-    t2.Position = UDim2.new(0.51,0,0,60)
-    t2.Size = UDim2.new(0,110,0,23)
-    t2.BackgroundTransparency = 1
+    local espsectitle = Instance.new("TextLabel",main)
+    espsectitle.Text = "ESP AYARLARI"
+    espsectitle.Font = Enum.Font.FredokaOne
+    espsectitle.TextColor3 = Color3.fromRGB(0,255,255)
+    espsectitle.TextSize = 19
+    espsectitle.Position = UDim2.new(0.045,0,0.13,0)
+    espsectitle.Size = UDim2.new(0.46,0,0,25)
+    espsectitle.BackgroundTransparency = 1
 
-    local y = 100
-    local function btn(label, opt, ypos, section)
+    local aimsectitle = Instance.new("TextLabel",main)
+    aimsectitle.Text = "AIMBOT AYARLARI"
+    aimsectitle.Font = Enum.Font.FredokaOne
+    aimsectitle.TextColor3 = Color3.fromRGB(20,255,160)
+    aimsectitle.TextSize = 19
+    aimsectitle.Position = UDim2.new(0.55,0,0.13,0)
+    aimsectitle.Size = UDim2.new(0.46,0,0,25)
+    aimsectitle.BackgroundTransparency = 1
+
+    local y1 = 92
+    local yStep = 35
+    local x1 = 0.037
+    local x2 = 0.54
+
+    local function togglebtn(label, opt, ypos, section)
         local parent = main
         local b = Instance.new("TextButton", parent)
-        b.Position = UDim2.new(section==1 and 0.05 or 0.5, 0, 0, ypos)
-        b.Size = UDim2.new(0,165,0,34)
-        b.Text = label..": "..((section==1 and ESP[opt]) or (section==2 and Aimbot[opt]) and "AÇIK" or "KAPALI")
-        b.BackgroundColor3 = section==1 and (ESP[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70))
+        b.Position = UDim2.new(section==1 and x1 or x2, 0, 0, ypos)
+        b.Size = UDim2.new(0,178,0,32)
+        b.Text = label..": "..(((section==1 and ESP[opt]) or (section==2 and Aimbot[opt])) and "AÇIK" or "KAPALI")
+        b.BackgroundColor3 = (section==1 and (ESP[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70)))
                            or (Aimbot[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70))
         b.TextColor3 = Color3.fromRGB(255,255,255)
         b.Font = Enum.Font.FredokaOne
         b.BorderSizePixel = 0
-        b.TextSize = 19
+        b.TextSize = 18
         b.MouseButton1Click:Connect(function()
             if section == 1 then
                 ESP[opt] = not ESP[opt]
@@ -501,25 +508,25 @@ local function CreateMenu()
         return b
     end
 
-    btn("ESP Aç/Kapat","enabled",y,1)
-    btn("Kutu (Box)","box",y+42,1)
-    btn("Mesafe (Distance)","distance",y+84,1)
-    btn("İsim Göster","name",y+126,1)
-    btn("Tüm İskelet","skeleton",y+168,1)
-    btn("Head Circle","headcircle",y+210,1)
+    togglebtn("ESP AKTİF","enabled",y1,1)
+    togglebtn("Kutu (Box)","box",y1+yStep,1)
+    togglebtn("Mesafe (Distance)","distance",y1+(yStep*2),1)
+    togglebtn("İsim Göster","name",y1+(yStep*3),1)
+    togglebtn("Tüm İskelet","skeleton",y1+(yStep*4),1)
+    togglebtn("Head Circle","headcircle",y1+(yStep*5),1)
 
     local clrLabel = Instance.new("TextLabel",main)
-    clrLabel.Position = UDim2.new(0.05,5,0,y+252)
-    clrLabel.Size = UDim2.new(0,105,0,25)
-    clrLabel.Text = "Renk Ayarla"
+    clrLabel.Position = UDim2.new(x1,9,0,y1+(yStep*6))
+    clrLabel.Size = UDim2.new(0,108,0,25)
+    clrLabel.Text = "ESP Rengi"
     clrLabel.Font = Enum.Font.FredokaOne
     clrLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    clrLabel.TextSize = 18
+    clrLabel.TextSize = 17
     clrLabel.BackgroundTransparency = 1
 
     local clrBtn = Instance.new("TextButton",main)
-    clrBtn.Position = UDim2.new(0.20,0,0,y+252)
-    clrBtn.Size = UDim2.new(0,43,0,25)
+    clrBtn.Position = UDim2.new(x1+0.22,0,0,y1+(yStep*6))
+    clrBtn.Size = UDim2.new(0,44,0,25)
     clrBtn.BackgroundColor3 = ESP.color
     clrBtn.Text = ""
     clrBtn.BorderSizePixel = 0
@@ -529,10 +536,10 @@ local function CreateMenu()
         clrBtn.BackgroundColor3 = ESP.color
     end)
 
-    local list = {"Head","Body","ClosestPart"}
+    local targList = {"Head","Body","ClosestPart"}
     local lb = Instance.new("TextLabel",main)
-    lb.Position = UDim2.new(0.5,5,0,y)
-    lb.Size = UDim2.new(0,61,0,33)
+    lb.Position = UDim2.new(x2,11,0,y1)
+    lb.Size = UDim2.new(0,66,0,32)
     lb.Text = "Hedef:"
     lb.Font = Enum.Font.FredokaOne
     lb.TextColor3 = Color3.fromRGB(255,255,255)
@@ -540,8 +547,8 @@ local function CreateMenu()
     lb.BackgroundTransparency = 1
 
     local sel = Instance.new("TextButton",main)
-    sel.Position = UDim2.new(0.59,0,0,y)
-    sel.Size = UDim2.new(0,97,0,33)
+    sel.Position = UDim2.new(x2+0.15,0,0,y1)
+    sel.Size = UDim2.new(0,101,0,32)
     sel.Text = Aimbot.targetmode
     sel.BackgroundColor3 = Color3.fromRGB(30,75,90)
     sel.TextColor3 = Color3.fromRGB(255,255,255)
@@ -549,18 +556,18 @@ local function CreateMenu()
     sel.BorderSizePixel = 0
     sel.TextSize = 17
     sel.MouseButton1Click:Connect(function()
-        local i = table.find(list,Aimbot.targetmode) or 1
-        i = i+1> #list and 1 or i+1
-        Aimbot.targetmode = list[i]
+        local i = table.find(targList,Aimbot.targetmode) or 1
+        i = i+1> #targList and 1 or i+1
+        Aimbot.targetmode = targList[i]
         sel.Text = Aimbot.targetmode
     end)
 
-    btn("Aimbot Aç/Kapat","enabled",y+54,2)
-    btn("SilentAim Aç/Kapat","silent",y+108,2)
+    togglebtn("Aimbot AKTİF","enabled",y1+(yStep*2),2)
+    togglebtn("SilentAim AKTİF","silent",y1+(yStep*3)+7,2)
 
     local fovl = Instance.new("TextLabel",main)
-    fovl.Position = UDim2.new(0.5,5,0,y+162)
-    fovl.Size = UDim2.new(0,45,0,29)
+    fovl.Position = UDim2.new(x2,11,0,y1+(yStep*5)+3)
+    fovl.Size = UDim2.new(0,58,0,29)
     fovl.BackgroundTransparency = 1
     fovl.Text = "FOV:"
     fovl.Font = Enum.Font.FredokaOne
@@ -568,8 +575,8 @@ local function CreateMenu()
     fovl.TextSize = 17
 
     local fovb = Instance.new("TextBox",main)
-    fovb.Position = UDim2.new(0.62,0,0,y+162)
-    fovb.Size = UDim2.new(0,77,0,29)
+    fovb.Position = UDim2.new(x2+0.17,0,0,y1+(yStep*5)+2)
+    fovb.Size = UDim2.new(0,74,0,29)
     fovb.Text = tostring(Aimbot.fov)
     fovb.BackgroundColor3 = Color3.fromRGB(44,38,60)
     fovb.TextColor3 = Color3.fromRGB(255,255,255)
@@ -585,6 +592,15 @@ local function CreateMenu()
             fovb.Text = tostring(Aimbot.fov)
         end
     end)
+
+    local keylbl = Instance.new("TextLabel",main)
+    keylbl.Text = "Menüyü aç/kapat: Insert tuşu"
+    keylbl.Font = Enum.Font.FredokaOne
+    keylbl.TextColor3 = Color3.fromRGB(170,190,255)
+    keylbl.TextSize = 14
+    keylbl.Position = UDim2.new(0.04,0,1,-28)
+    keylbl.Size = UDim2.new(0.92,0,0,19)
+    keylbl.BackgroundTransparency = 1
 end
 
 CreatePasswordMenu(CreateMenu)
@@ -592,7 +608,7 @@ CreatePasswordMenu(CreateMenu)
 game:GetService("UserInputService").InputBegan:Connect(function(inp,gp)
     if gp then return end
     if inp.KeyCode == Enum.KeyCode.Insert then
-        local main = game.CoreGui:FindFirstChild("NebulaBloxstrikeMenu")
+        local main = game:GetService("CoreGui"):FindFirstChild("NebulaBloxstrikeMenu")
         if main then
             main.Enabled = not main.Enabled
         else
