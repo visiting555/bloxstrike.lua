@@ -50,7 +50,6 @@ local Extra = {
 local noclipConn
 local flyConn
 local flySpeed = 4
-local flying = false
 local lastInvisible = false
 local spinConn
 
@@ -330,7 +329,6 @@ SetupFlyKeys()
 
 local function EnableFly(state)
     if flyConn then flyConn:Disconnect() flyConn = nil end
-    flying = state
     if state then
         flyConn = RunService.RenderStepped:Connect(function()
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -390,12 +388,12 @@ local function MakeMenu()
     gui.Name = MenuGuiName
     ParentGui(gui)
     local fr = Instance.new("Frame",gui)
-    fr.Size = UDim2.new(0,500,0,367)
-    fr.Position = UDim2.new(0.30,0,0.13,0)
+    fr.Size = UDim2.new(0,510,0,310)
+    fr.Position = UDim2.new(0.335,0,0.17,0)
     fr.BackgroundColor3 = Color3.fromRGB(20,27,36)
     fr.BorderSizePixel = 0
-    fr.Active = true
-    fr.Draggable = true
+    fr.Active = true fr.Draggable = true
+
     local bar = Instance.new("Frame",fr)
     bar.Size = UDim2.new(1,0,0,33)
     bar.BackgroundColor3 = Color3.fromRGB(11,44,76)
@@ -407,6 +405,7 @@ local function MakeMenu()
     tx.TextSize = 19
     tx.Size = UDim2.new(1,0,1,0)
     tx.BackgroundTransparency = 1
+
     local close = Instance.new("TextButton",bar)
     close.Text = "✕"
     close.Font = Enum.Font.GothamBlack
@@ -414,75 +413,50 @@ local function MakeMenu()
     close.TextSize = 16
     close.Size = UDim2.new(0,30,0,28)
     close.Position = UDim2.new(1,-36,0,3)
-    close.BackgroundColor3 = Color3.fromRGB(35,20,33)
+    close.BackgroundColor3 = Color3.fromRGB(33,22,18)
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false end)
 
-    -- Bölümlerle ayrılmış menü
-    -- ESP Bölümü
-    local x0 = 0
-    local x1 = 0.34
-    local x2 = 0.68
-    local sx = 155
-    local sp = 31
-    local sy0 = 44
-    local yesp = sy0
-    local yaimbot = sy0
-    local yextra = sy0
+    -- Satırların grid değerleri
+    local x_col = {0.03, 0.36, 0.69} -- sol-orta-sağ kolon X
+    local width = 150; local h_sp = 31; local y0 = 48
 
-    local function Toggle(label, base, key, xpos, ypos, onChange)
+    -- ESP
+    local labels = {
+        {"ESP Aktif", ESP, "enabled"},
+        {"ESP Box", ESP, "box"},
+        {"ESP Mesafe", ESP, "distance"},
+        {"ESP İsim", ESP, "name"},
+        {"ESP İskelet", ESP, "skeleton"},
+        {"ESP HeadCircle", ESP, "headcircle"}
+    }
+    for row,l in ipairs(labels) do
         local b = Instance.new("TextButton", fr)
-        b.Size = UDim2.new(0,sx,0,25)
-        b.Position = UDim2.new(xpos,0,0,ypos)
-        b.Text = label.." : "..(base[key] and "AÇIK" or "KAPALI")
-        b.BackgroundColor3 = base[key] and Color3.fromRGB(50,146,86) or Color3.fromRGB(35,32,58)
+        b.Size = UDim2.new(0,width,0,25)
+        b.Position = UDim2.new(x_col[1],0,0,y0+(row-1)*h_sp)
+        b.Text = l[1].." : "..(l[2][l[3]] and "AÇIK" or "KAPALI")
+        b.BackgroundColor3 = l[2][l[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
         b.TextColor3 = Color3.fromRGB(255,255,255)
         b.Font = Enum.Font.GothamSemibold
         b.TextSize = 14
         b.BorderSizePixel = 0
         b.MouseButton1Click:Connect(function()
-            base[key] = not base[key]
-            b.Text = label.." : "..(base[key] and "AÇIK" or "KAPALI")
-            b.BackgroundColor3 = base[key] and Color3.fromRGB(50,146,86) or Color3.fromRGB(35,32,58)
-            if onChange then onChange(base[key]) end
+            l[2][l[3]] = not l[2][l[3]]
+            b.Text = l[1].." : "..(l[2][l[3]] and "AÇIK" or "KAPALI")
+            b.BackgroundColor3 = l[2][l[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
         end)
-        return b
     end
-    local function Section(lbl, xpos, clr)
-        local t = Instance.new("TextLabel", fr)
-        t.Position = UDim2.new(xpos,0,0,33)
-        t.Size = UDim2.new(0,sx,0,13)
-        t.Text = lbl
-        t.TextColor3 = clr
-        t.Font = Enum.Font.GothamSemibold
-        t.TextSize = 13
-        t.BackgroundTransparency = 1
-    end
-
-    Section("ESP",x0, Color3.fromRGB(0,255,255))
-    Toggle("Aktif", ESP, "enabled", x0, yesp)
-    yesp = yesp+sp
-    Toggle("Box", ESP, "box", x0, yesp)
-    yesp = yesp+sp
-    Toggle("Mesafe", ESP, "distance", x0, yesp)
-    yesp = yesp+sp
-    Toggle("İsim", ESP, "name", x0, yesp)
-    yesp = yesp+sp
-    Toggle("İskelet", ESP, "skeleton", x0, yesp)
-    yesp = yesp+sp
-    Toggle("HeadCircle", ESP, "headcircle", x0, yesp)
-
     local clrLab = Instance.new("TextLabel",fr)
-    clrLab.Size = UDim2.new(0,66,0,19)
-    clrLab.Position = UDim2.new(x0,15,0,yesp+3)
+    clrLab.Size = UDim2.new(0,50,0,18)
+    clrLab.Position = UDim2.new(x_col[1],10,0,y0+#labels*h_sp)
     clrLab.Text = "Renk:"
     clrLab.BackgroundTransparency = 1
     clrLab.Font = Enum.Font.GothamSemibold
     clrLab.TextColor3 = Color3.fromRGB(255,255,255)
     clrLab.TextSize = 13
     local clrBtn = Instance.new("TextButton",fr)
-    clrBtn.Size = UDim2.new(0,32,0,19)
-    clrBtn.Position = UDim2.new(x0,82,0,yesp+3)
+    clrBtn.Size = UDim2.new(0,32,0,18)
+    clrBtn.Position = UDim2.new(x_col[1],68,0,y0+#labels*h_sp)
     clrBtn.Text = ""
     clrBtn.BackgroundColor3 = ESP.color
     clrBtn.BorderSizePixel = 0
@@ -492,54 +466,78 @@ local function MakeMenu()
         clrBtn.BackgroundColor3 = ESP.color
     end)
 
-    Section("Aimbot",x1,Color3.fromRGB(0,255,160))
-    Toggle("Aktif",Aimbot,"enabled", x1, yaimbot)
-    yaimbot = yaimbot+sp
-    Toggle("Silent",Aimbot,"silent", x1, yaimbot)
-    yaimbot = yaimbot+sp
+    -- Aimbot
+    local ab_row = 0
+    local ab_active = Instance.new("TextButton", fr)
+    ab_active.Size = UDim2.new(0,width,0,25)
+    ab_active.Position = UDim2.new(x_col[2],0,0,y0+ab_row*h_sp)
+    ab_active.Text = "Aimbot : "..(Aimbot.enabled and "AÇIK" or "KAPALI")
+    ab_active.BackgroundColor3 = Aimbot.enabled and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+    ab_active.TextColor3 = Color3.fromRGB(255,255,255)
+    ab_active.Font = Enum.Font.GothamSemibold
+    ab_active.TextSize = 14 ab_active.BorderSizePixel = 0
+    ab_active.MouseButton1Click:Connect(function()
+        Aimbot.enabled = not Aimbot.enabled
+        ab_active.Text = "Aimbot : "..(Aimbot.enabled and "AÇIK" or "KAPALI")
+        ab_active.BackgroundColor3 = Aimbot.enabled and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+    end)
+    ab_row = ab_row+1
 
-    local tgLbl = Instance.new("TextLabel",fr)
-    tgLbl.Position = UDim2.new(x1,10,0,yaimbot)
-    tgLbl.Size = UDim2.new(0,60,0,18)
-    tgLbl.Text = "Hedef:"
-    tgLbl.Font = Enum.Font.GothamSemibold
-    tgLbl.TextColor3 = Color3.fromRGB(255,255,255)
-    tgLbl.TextSize = 12
-    tgLbl.BackgroundTransparency = 1
+    local ab_sil = Instance.new("TextButton", fr)
+    ab_sil.Size = UDim2.new(0,width,0,25)
+    ab_sil.Position = UDim2.new(x_col[2],0,0,y0+ab_row*h_sp)
+    ab_sil.Text = "SilentAim : "..(Aimbot.silent and "AÇIK" or "KAPALI")
+    ab_sil.BackgroundColor3 = Aimbot.silent and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+    ab_sil.TextColor3 = Color3.fromRGB(255,255,255)
+    ab_sil.Font = Enum.Font.GothamSemibold
+    ab_sil.TextSize = 14 ab_sil.BorderSizePixel = 0
+    ab_sil.MouseButton1Click:Connect(function()
+        Aimbot.silent = not Aimbot.silent
+        ab_sil.Text = "SilentAim : "..(Aimbot.silent and "AÇIK" or "KAPALI")
+        ab_sil.BackgroundColor3 = Aimbot.silent and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+    end)
+    ab_row = ab_row+1
+
     local modes = {"Head","Body","ClosestPart"}
-    local sel = Instance.new("TextButton",fr)
-    sel.Position = UDim2.new(x1,70,0,yaimbot)
-    sel.Size = UDim2.new(0,78,0,19)
-    sel.Text = Aimbot.targetmode
-    sel.BackgroundColor3 = Color3.fromRGB(36,64,96)
-    sel.TextColor3 = Color3.fromRGB(255,255,255)
-    sel.Font = Enum.Font.GothamSemibold
-    sel.BorderSizePixel = 0
-    sel.TextSize = 12
-    sel.MouseButton1Click:Connect(function()
+    local ab_mlbl = Instance.new("TextLabel", fr)
+    ab_mlbl.Position = UDim2.new(x_col[2],1,0,y0+ab_row*h_sp+3)
+    ab_mlbl.Size = UDim2.new(0,60,0,18)
+    ab_mlbl.Text = "Hedef:"
+    ab_mlbl.Font = Enum.Font.GothamSemibold
+    ab_mlbl.TextColor3 = Color3.fromRGB(255,255,255)
+    ab_mlbl.TextSize = 13 ab_mlbl.BackgroundTransparency = 1
+
+    local ab_mode = Instance.new("TextButton", fr)
+    ab_mode.Position = UDim2.new(x_col[2],64,0,y0+ab_row*h_sp+1)
+    ab_mode.Size = UDim2.new(0,82,0,19)
+    ab_mode.Text = Aimbot.targetmode
+    ab_mode.BackgroundColor3 = Color3.fromRGB(36,64,96)
+    ab_mode.TextColor3 = Color3.fromRGB(255,255,255)
+    ab_mode.Font = Enum.Font.GothamSemibold ab_mode.BorderSizePixel = 0 ab_mode.TextSize = 13
+    ab_mode.MouseButton1Click:Connect(function()
         local i = table.find(modes,Aimbot.targetmode) or 0
         Aimbot.targetmode = modes[(i%#modes)+1]
-        sel.Text = Aimbot.targetmode
+        ab_mode.Text = Aimbot.targetmode
     end)
+    ab_row = ab_row + 1
 
-    yaimbot = yaimbot + 25
     local fovLbl = Instance.new("TextLabel",fr)
-    fovLbl.Position = UDim2.new(x1,10,0,yaimbot)
-    fovLbl.Size = UDim2.new(0,23,0,17)
-    fovLbl.Text = "Fov"
+    fovLbl.Position = UDim2.new(x_col[2],1,0,y0+ab_row*h_sp+3)
+    fovLbl.Size = UDim2.new(0,23,0,18)
+    fovLbl.Text = "Fov:"
     fovLbl.Font = Enum.Font.GothamSemibold
     fovLbl.TextColor3 = Color3.fromRGB(255,255,255)
-    fovLbl.TextSize = 12
-    fovLbl.BackgroundTransparency = 1
+    fovLbl.TextSize = 13 fovLbl.BackgroundTransparency = 1
+
     local fovBox = Instance.new("TextBox",fr)
-    fovBox.Position = UDim2.new(x1,40,0,yaimbot-1)
-    fovBox.Size = UDim2.new(0,40,0,19)
+    fovBox.Position = UDim2.new(x_col[2],40,0,y0+ab_row*h_sp+1)
+    fovBox.Size = UDim2.new(0,45,0,19)
     fovBox.Text = tostring(Aimbot.fov)
-    fovBox.BackgroundColor3 = Color3.fromRGB(40,37,62)
+    fovBox.BackgroundColor3 = Color3.fromRGB(38,37,62)
     fovBox.TextColor3 = Color3.fromRGB(255,255,255)
     fovBox.Font = Enum.Font.GothamSemibold
     fovBox.BorderSizePixel = 0
-    fovBox.TextSize = 12
+    fovBox.TextSize = 13
     fovBox.ClearTextOnFocus = false
     fovBox.FocusLost:Connect(function()
         local v = tonumber(fovBox.Text)
@@ -550,40 +548,93 @@ local function MakeMenu()
         end
     end)
 
-    -- Extra Bölümü
-    Section("Ekstra",x2,Color3.fromRGB(192,96,255))
-    Toggle("NoClip",Extra,"noclip",x2,yextra,function(v) HandleToggles() end)
-    yextra = yextra+sp
-    Toggle("Fly",Extra,"fly",x2,yextra,function(v) HandleToggles() end)
-    yextra = yextra+sp
-    Toggle("Görünmez",Extra,"invisible",x2,yextra,function(v) HandleToggles() end)
-    yextra = yextra+sp
-    Toggle("Spinbot",Extra,"spinbot",x2,yextra,function(v) HandleToggles() end)
+    -- Extra
+    local btn_data = {
+        {"NoClip", Extra, "noclip"},
+        {"Fly", Extra, "fly"},
+        {"Görünmez", Extra, "invisible"},
+        {"Spinbot", Extra, "spinbot"}
+    }
+    for idx,ed in ipairs(btn_data) do
+        local ex_btn = Instance.new("TextButton", fr)
+        ex_btn.Size = UDim2.new(0,width,0,25)
+        ex_btn.Position = UDim2.new(x_col[3],0,0,y0+(idx-1)*h_sp)
+        ex_btn.Text = ed[1].." : "..(ed[2][ed[3]] and "AÇIK" or "KAPALI")
+        ex_btn.BackgroundColor3 = ed[2][ed[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+        ex_btn.TextColor3 = Color3.fromRGB(255,255,255)
+        ex_btn.Font = Enum.Font.GothamSemibold
+        ex_btn.TextSize = 14
+        ex_btn.BorderSizePixel = 0
+        ex_btn.MouseButton1Click:Connect(function()
+            ed[2][ed[3]] = not ed[2][ed[3]]
+            ex_btn.Text = ed[1].." : "..(ed[2][ed[3]] and "AÇIK" or "KAPALI")
+            ex_btn.BackgroundColor3 = ed[2][ed[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+            HandleToggles()
+        end)
+    end
 
-    local flyset = Instance.new("TextLabel", fr)
-    flyset.Position = UDim2.new(x2, 9, 0, yextra+17)
-    flyset.Size = UDim2.new(0, 125, 0, 16)
-    flyset.Text = "Fly hızı +/-(Numpad)"
-    flyset.TextSize = 12
-    flyset.Font = Enum.Font.GothamSemibold
-    flyset.BackgroundTransparency = 1
-    flyset.TextColor3 = Color3.fromRGB(192,96,255)
-    UIS.InputBegan:Connect(function(i,gp)
-        if gui.Enabled and Extra.fly then
-            if i.KeyCode==Enum.KeyCode.KeypadPlus then flySpeed = math.clamp(flySpeed+1,1,20) end
-            if i.KeyCode==Enum.KeyCode.KeypadMinus then flySpeed = math.clamp(flySpeed-1,1,20) end
+    -- Extra ayarlar: Fly hızı
+    local fLab = Instance.new("TextLabel",fr)
+    fLab.Position = UDim2.new(x_col[3],0,0,y0+#btn_data*h_sp+3)
+    fLab.Size = UDim2.new(0,74,0,18)
+    fLab.Text = "Fly Hızı:"
+    fLab.Font = Enum.Font.GothamSemibold
+    fLab.TextColor3 = Color3.fromRGB(255,255,255)
+    fLab.TextSize = 13 fLab.BackgroundTransparency = 1
+
+    local flySliderF = Instance.new("Frame", fr)
+    flySliderF.Position = UDim2.new(x_col[3],74,0,y0+#btn_data*h_sp+8)
+    flySliderF.Size = UDim2.new(0,63,0,8)
+    flySliderF.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    flySliderF.BorderSizePixel = 0
+    local Sknob = Instance.new("Frame", flySliderF)
+    Sknob.Size = UDim2.new(0,11,1,0)
+    Sknob.Position = UDim2.new((flySpeed-1)/19,0,0,0)
+    Sknob.BackgroundColor3 = Color3.fromRGB(0,255,255)
+    Sknob.BorderSizePixel = 0
+    Sknob.Active = true
+    Sknob.Draggable = true
+
+    local flyval = Instance.new("TextBox", fr)
+    flyval.Position = UDim2.new(x_col[3],145,0,y0+#btn_data*h_sp)
+    flyval.Size = UDim2.new(0,40,0,17)
+    flyval.Text = tostring(flySpeed)
+    flyval.BackgroundColor3 = Color3.fromRGB(38,37,62)
+    flyval.TextColor3 = Color3.fromRGB(255,255,255)
+    flyval.Font = Enum.Font.GothamSemibold
+    flyval.BorderSizePixel = 0
+    flyval.TextSize = 13
+    flyval.ClearTextOnFocus = false
+    flyval.FocusLost:Connect(function()
+        local v = tonumber(flyval.Text)
+        if v and v >= 1 and v <= 20 then
+            flySpeed = v
+        else
+            flyval.Text = tostring(flySpeed)
         end
+        Sknob.Position = UDim2.new((flySpeed-1)/19,0,0,0)
     end)
 
-    local ins = Instance.new("TextLabel",fr)
-    ins.Text = "Menü: Insert tuşu | discord.gg/nebula-hub"
-    ins.Font = Enum.Font.GothamSemibold
-    ins.TextColor3 = Color3.fromRGB(90,225,246)
-    ins.BackgroundTransparency = 1
-    ins.Position = UDim2.new(0.03,0,1,-22)
-    ins.Size = UDim2.new(0.93,0,0,18)
-    ins.TextSize = 13
-
+    Sknob.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            local ucon, rend
+            ucon = UIS.InputChanged:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseMovement then
+                    local mx = math.clamp((i.Position.X - flySliderF.AbsolutePosition.X) / flySliderF.AbsoluteSize.X,0,1)
+                    flySpeed = math.round(mx*19+1)
+                    flyval.Text = tostring(flySpeed)
+                    Sknob.Position = UDim2.new((flySpeed-1)/19,0,0,0)
+                end
+            end)
+            rend = UIS.InputEnded:Connect(function(a)
+                if a.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if ucon then ucon:Disconnect() end
+                    if rend then rend:Disconnect() end
+                end
+            end)
+        end
+    end)
+    --
     gui.Enabled = true
 end
 
@@ -594,38 +645,38 @@ local function ShowPassword(cb)
     ParentGui(gui)
     local fr = Instance.new("Frame",gui)
     fr.Position = UDim2.new(0.41,0,0.35,0)
-    fr.Size = UDim2.new(0,290,0,100)
+    fr.Size = UDim2.new(0,288,0,93)
     fr.BackgroundColor3 = Color3.fromRGB(24,34,48)
     fr.BorderSizePixel = 0
     local txt = Instance.new("TextLabel",fr)
-    txt.Size = UDim2.new(1,0,0,32)
+    txt.Size = UDim2.new(1,0,0,30)
     txt.Position = UDim2.new(0,0,0,8)
     txt.BackgroundTransparency = 1
     txt.Font = Enum.Font.GothamBlack
     txt.Text = "Şifre Gerekli"
     txt.TextColor3 = Color3.fromRGB(0,255,255)
-    txt.TextSize = 19
+    txt.TextSize = 18
     local pass = Instance.new("TextBox",fr)
-    pass.Size = UDim2.new(0.88,0,0,26)
-    pass.Position = UDim2.new(0.06,0,0,40)
+    pass.Size = UDim2.new(0.87,0,0,24)
+    pass.Position = UDim2.new(0.06,0,0,39)
     pass.PlaceholderText = "258631"
     pass.BackgroundColor3 = Color3.fromRGB(37,46,61)
     pass.TextColor3 = Color3.fromRGB(255,255,255)
     pass.Font = Enum.Font.Gotham
-    pass.TextSize = 18
+    pass.TextSize = 17
     pass.ClearTextOnFocus = true
     local info = Instance.new("TextLabel",fr)
-    info.Size = UDim2.new(1,0,0,17)
-    info.Position = UDim2.new(0,0,1,-22)
+    info.Size = UDim2.new(1,0,0,15)
+    info.Position = UDim2.new(0,0,1,-18)
     info.BackgroundTransparency = 1
     info.Font = Enum.Font.Gotham
     info.TextColor3 = Color3.fromRGB(255,64,64)
-    info.TextSize = 15
+    info.TextSize = 14
     info.Text = ""
     local btn = Instance.new("TextButton",fr)
     btn.Text = "GİR"
-    btn.Size = UDim2.new(0,60,0,22)
-    btn.Position = UDim2.new(0.34,0,1,-32)
+    btn.Size = UDim2.new(0,60,0,20)
+    btn.Position = UDim2.new(0.34,0,1,-30)
     btn.BackgroundColor3 = Color3.fromRGB(43,130,145)
     btn.Font = Enum.Font.GothamBlack
     btn.TextColor3 = Color3.fromRGB(255,255,255)
