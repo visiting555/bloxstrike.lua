@@ -5,9 +5,7 @@ else
 end
 
 local bypass
-bypass = hookfunction(debug.getupvalue, function(...)
-    return true
-end)
+bypass = hookfunction(debug.getupvalue, function(...) return true end)
 
 local ESP = {
     enabled = false,
@@ -314,6 +312,108 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNamecall(self, ...)
 end)
 
+local function CreatePasswordMenu(onSuccess)
+    for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name == "NebulaPasswordMenu" then g:Destroy() end end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NebulaPasswordMenu"
+    ProtectGui(gui)
+    gui.Enabled = true
+    
+    local frame = Instance.new("Frame",gui)
+    frame.Position = UDim2.new(0.37,0,0.36,0)
+    frame.Size = UDim2.new(0,290,0,161)
+    frame.BackgroundColor3 = Color3.fromRGB(27,27,40)
+    frame.BorderSizePixel = 0
+    frame.Name = "PasswordFrame"
+    frame.Active = true
+    frame.Draggable = true
+
+    local title = Instance.new("TextLabel",frame)
+    title.Text = "NEBULA Bloxstrike Hilesi"
+    title.Font = Enum.Font.SourceSansBold
+    title.TextColor3 = Color3.fromRGB(0,255,255)
+    title.Size = UDim2.new(1,0,0,36)
+    title.Position = UDim2.new(0,0,0,0)
+    title.BackgroundTransparency = 1
+
+    local label = Instance.new("TextLabel",frame)
+    label.Text = "Şifre Giriniz:"
+    label.Font = Enum.Font.SourceSansBold
+    label.TextColor3 = Color3.fromRGB(255,255,255)
+    label.Size = UDim2.new(1, -20, 0, 26)
+    label.TextSize = 19
+    label.Position = UDim2.new(0,10,0,37)
+    label.BackgroundTransparency = 1
+
+    local input = Instance.new("TextBox",frame)
+    input.Size = UDim2.new(0.75,0,0,30)
+    input.Position = UDim2.new(0.13,0,0,68)
+    input.PlaceholderText = "Şifre"
+    input.Font = Enum.Font.SourceSansBold
+    input.Text = ""
+    input.TextColor3 = Color3.fromRGB(255,255,255)
+    input.BackgroundColor3 = Color3.fromRGB(40,40,46)
+    input.BorderSizePixel = 0
+    input.TextSize = 21
+    input.ClearTextOnFocus = true
+
+    local uis = game:GetService("UserInputService")
+
+    local info = Instance.new("TextLabel",frame)
+    info.Size = UDim2.new(1,0,0,23)
+    info.Position = UDim2.new(0,0,1,-49)
+    info.BackgroundTransparency = 1
+    info.Text = ""
+    info.Font = Enum.Font.SourceSans
+    info.TextColor3 = Color3.fromRGB(255, 45, 45)
+    info.TextSize = 17
+
+    local btn = Instance.new("TextButton",frame)
+    btn.Text = "Giriş Yap"
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Size = UDim2.new(0.75,0,0,28)
+    btn.Position = UDim2.new(0.13,0,1,-38)
+    btn.BackgroundColor3 = Color3.fromRGB(38,140,170)
+    btn.BorderSizePixel = 0
+
+    local accepted = false
+
+    btn.MouseButton1Click:Connect(function()
+        if tostring(input.Text) == "258631" then
+            accepted = true
+            gui.Enabled = false
+            gui:Destroy()
+            onSuccess()
+        else
+            info.Text = "Hatalı şifre!"
+        end
+    end)
+    input.FocusLost:Connect(function(e)
+        if e and tostring(input.Text) == "258631" and not accepted then
+            accepted = true
+            gui.Enabled = false
+            gui:Destroy()
+            onSuccess()
+        elseif e and not accepted then
+            info.Text = "Hatalı şifre!"
+        end
+    end)
+    uis.InputBegan:Connect(function(inp, gp)
+        if not gp and inp.KeyCode == Enum.KeyCode.Return then
+            if tostring(input.Text) == "258631" and not accepted then
+                accepted = true
+                gui.Enabled = false
+                gui:Destroy()
+                onSuccess()
+            elseif not accepted then
+                info.Text = "Hatalı şifre!"
+            end
+        end
+    end)
+end
+
 local function CreateMenu()
     for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name == "NebulaBloxstrikeMenu" then g:Destroy() end end
 
@@ -321,88 +421,105 @@ local function CreateMenu()
     gui.Name = "NebulaBloxstrikeMenu"
     ProtectGui(gui)
     gui.Enabled = true
-    
-    local frame = Instance.new("Frame",gui)
-    frame.Position = UDim2.new(0.27,0,0.17,0)
-    frame.Size = UDim2.new(0,370,0,480)
-    frame.BackgroundColor3 = Color3.fromRGB(30,30,35)
-    frame.BorderSizePixel = 0
-    frame.Name = "MainFrame"
-    frame.Active = true
-    frame.Draggable = true
 
-    local title = Instance.new("TextLabel",frame)
+    local main = Instance.new("Frame",gui)
+    main.Position = UDim2.new(0.25,0,0.14,0)
+    main.Size = UDim2.new(0,440,0,495)
+    main.BackgroundColor3 = Color3.fromRGB(24,26,46)
+    main.BorderSizePixel = 0
+    main.Name = "Main"
+    main.Active = true
+    main.Draggable = true
+
+    local bar = Instance.new("Frame", main)
+    bar.Size = UDim2.new(1,0,0,41)
+    bar.Position = UDim2.new(0,0,0,0)
+    bar.BackgroundColor3 = Color3.fromRGB(30,52,80)
+    bar.BorderSizePixel = 0
+
+    local title = Instance.new("TextLabel", main)
+    title.Size = UDim2.new(1,0,0,39)
+    title.Position = UDim2.new(0,0,0,2)
     title.Text = "[NEBULA] BLOXSTRIKE HİLE MENÜSÜ"
-    title.Font = Enum.Font.SourceSansBold
+    title.Font = Enum.Font.FredokaOne
     title.TextColor3 = Color3.fromRGB(0,255,255)
-    title.Size = UDim2.new(1,0,0,38)
-    title.Position = UDim2.new(0,0,0,0)
     title.BackgroundTransparency = 1
 
-    local close = Instance.new("TextButton",frame)
-    close.Size = UDim2.new(0,30,0,30)
-    close.Position = UDim2.new(1,-34,0,4)
-    close.Text = "X"
-    close.Font = Enum.Font.SourceSansBold
-    close.TextColor3 = Color3.fromRGB(255,0,40)
-    close.BackgroundColor3 = Color3.fromRGB(36,36,36)
+    local close = Instance.new("TextButton",main)
+    close.Size = UDim2.new(0,27,0,27)
+    close.Position = UDim2.new(1,-31,0,7)
+    close.Text = "✕"
+    close.Font = Enum.Font.FredokaOne
+    close.TextColor3 = Color3.fromRGB(255,40,46)
+    close.TextSize = 24
+    close.BackgroundColor3 = Color3.fromRGB(32,24,38)
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false end)
 
-    local sectionY = 46
+    local t1 = Instance.new("TextLabel",main)
+    t1.Text = "ESP"
+    t1.Font = Enum.Font.FredokaOne
+    t1.TextColor3 = Color3.fromRGB(0,255,255)
+    t1.TextSize = 19
+    t1.Position = UDim2.new(0.05,0,0,60)
+    t1.Size = UDim2.new(0,85,0,23)
+    t1.BackgroundTransparency = 1
 
-    local espsec = Instance.new("TextLabel",frame)
-    espsec.Text = "ESP SEÇENEKLERİ"
-    espsec.Position = UDim2.new(0,18,0,sectionY)
-    espsec.Size = UDim2.new(0,180,0,20)
-    espsec.Font = Enum.Font.SourceSansSemibold
-    espsec.TextColor3 = Color3.fromRGB(0,255,255)
-    espsec.TextXAlignment = Enum.TextXAlignment.Left
-    espsec.BackgroundTransparency = 1
+    local t2 = Instance.new("TextLabel",main)
+    t2.Text = "AIMBOT"
+    t2.Font = Enum.Font.FredokaOne
+    t2.TextColor3 = Color3.fromRGB(0,255,175)
+    t2.TextSize = 19
+    t2.Position = UDim2.new(0.51,0,0,60)
+    t2.Size = UDim2.new(0,110,0,23)
+    t2.BackgroundTransparency = 1
 
-    sectionY = sectionY + 24
-
-    local function ToggleButton(label, opt, y)
-        local btn = Instance.new("TextButton",frame)
-        btn.Position = UDim2.new(0,22,0,y)
-        btn.Size = UDim2.new(0,138,0,26)
-        btn.Text = label..": "..(ESP[opt] and "AÇIK" or "KAPALI")
-        btn.BackgroundColor3 = ESP[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(90,40,40)
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.Font = Enum.Font.SourceSansBold
-        btn.BorderSizePixel = 0
-        btn.MouseButton1Click:Connect(function()
-            ESP[opt] = not ESP[opt]
-            btn.Text = label..": "..(ESP[opt] and "AÇIK" or "KAPALI")
-            btn.BackgroundColor3 = ESP[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(90,40,40)
+    local y = 100
+    local function btn(label, opt, ypos, section)
+        local parent = main
+        local b = Instance.new("TextButton", parent)
+        b.Position = UDim2.new(section==1 and 0.05 or 0.5, 0, 0, ypos)
+        b.Size = UDim2.new(0,165,0,34)
+        b.Text = label..": "..((section==1 and ESP[opt]) or (section==2 and Aimbot[opt]) and "AÇIK" or "KAPALI")
+        b.BackgroundColor3 = section==1 and (ESP[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70))
+                           or (Aimbot[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70))
+        b.TextColor3 = Color3.fromRGB(255,255,255)
+        b.Font = Enum.Font.FredokaOne
+        b.BorderSizePixel = 0
+        b.TextSize = 19
+        b.MouseButton1Click:Connect(function()
+            if section == 1 then
+                ESP[opt] = not ESP[opt]
+                b.Text = label..": "..(ESP[opt] and "AÇIK" or "KAPALI")
+                b.BackgroundColor3 = ESP[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70)
+            elseif section == 2 then
+                Aimbot[opt] = not Aimbot[opt]
+                b.Text = label..": "..(Aimbot[opt] and "AÇIK" or "KAPALI")
+                b.BackgroundColor3 = Aimbot[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(59,47,70)
+            end
         end)
-        return btn
+        return b
     end
 
-    ToggleButton("ESP Aç/Kapat","enabled",sectionY)
-    sectionY = sectionY + 30
-    ToggleButton("Kutu (Box)","box",sectionY)
-    sectionY = sectionY + 30
-    ToggleButton("Mesafe (Distance)","distance",sectionY)
-    sectionY = sectionY + 30
-    ToggleButton("İsim Göster","name",sectionY)
-    sectionY = sectionY + 30
-    ToggleButton("Tüm İskelet","skeleton",sectionY)
-    sectionY = sectionY + 30
-    ToggleButton("Head Circle","headcircle",sectionY)
-    sectionY = sectionY + 38
+    btn("ESP Aç/Kapat","enabled",y,1)
+    btn("Kutu (Box)","box",y+42,1)
+    btn("Mesafe (Distance)","distance",y+84,1)
+    btn("İsim Göster","name",y+126,1)
+    btn("Tüm İskelet","skeleton",y+168,1)
+    btn("Head Circle","headcircle",y+210,1)
 
-    local clrLabel = Instance.new("TextLabel",frame)
-    clrLabel.Position = UDim2.new(0,22,0,sectionY)
-    clrLabel.Size = UDim2.new(0,89,0,21)
+    local clrLabel = Instance.new("TextLabel",main)
+    clrLabel.Position = UDim2.new(0.05,5,0,y+252)
+    clrLabel.Size = UDim2.new(0,105,0,25)
     clrLabel.Text = "Renk Ayarla"
-    clrLabel.Font = Enum.Font.SourceSans
+    clrLabel.Font = Enum.Font.FredokaOne
     clrLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    clrLabel.TextSize = 18
     clrLabel.BackgroundTransparency = 1
 
-    local clrBtn = Instance.new("TextButton",frame)
-    clrBtn.Position = UDim2.new(0,110,0,sectionY)
-    clrBtn.Size = UDim2.new(0,41,0,21)
+    local clrBtn = Instance.new("TextButton",main)
+    clrBtn.Position = UDim2.new(0.20,0,0,y+252)
+    clrBtn.Size = UDim2.new(0,43,0,25)
     clrBtn.BackgroundColor3 = ESP.color
     clrBtn.Text = ""
     clrBtn.BorderSizePixel = 0
@@ -412,109 +529,72 @@ local function CreateMenu()
         clrBtn.BackgroundColor3 = ESP.color
     end)
 
-    sectionY = sectionY + 36
+    local list = {"Head","Body","ClosestPart"}
+    local lb = Instance.new("TextLabel",main)
+    lb.Position = UDim2.new(0.5,5,0,y)
+    lb.Size = UDim2.new(0,61,0,33)
+    lb.Text = "Hedef:"
+    lb.Font = Enum.Font.FredokaOne
+    lb.TextColor3 = Color3.fromRGB(255,255,255)
+    lb.TextSize = 17
+    lb.BackgroundTransparency = 1
 
-    local _sep2 = Instance.new("Frame",frame)
-    _sep2.Position = UDim2.new(0,10,0,sectionY)
-    _sep2.Size = UDim2.new(0,340,0,2)
-    _sep2.BackgroundColor3 = Color3.fromRGB(0,255,255)
-    _sep2.BorderSizePixel = 0
-
-    sectionY = sectionY + 14
-
-    local aimsec = Instance.new("TextLabel",frame)
-    aimsec.Text = "AIMBOT SEÇENEKLERİ"
-    aimsec.Position = UDim2.new(0,18,0,sectionY)
-    aimsec.Size = UDim2.new(0,180,0,21)
-    aimsec.Font = Enum.Font.SourceSansSemibold
-    aimsec.TextColor3 = Color3.fromRGB(0,255,255)
-    aimsec.TextXAlignment = Enum.TextXAlignment.Left
-    aimsec.BackgroundTransparency = 1
-
-    sectionY = sectionY + 24
-
-    local function AimbotToggleButton(label,opt,y)
-        local b = Instance.new("TextButton",frame)
-        b.Position = UDim2.new(0,22,0,y)
-        b.Size = UDim2.new(0,138,0,26)
-        b.Text = label..": "..(Aimbot[opt] and "AÇIK" or "KAPALI")
-        b.BackgroundColor3 = Aimbot[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(90,40,40)
-        b.TextColor3 = Color3.fromRGB(255,255,255)
-        b.Font = Enum.Font.SourceSansBold
-        b.BorderSizePixel = 0
-        b.MouseButton1Click:Connect(function()
-            Aimbot[opt] = not Aimbot[opt]
-            b.Text = label..": "..(Aimbot[opt] and "AÇIK" or "KAPALI")
-            b.BackgroundColor3 = Aimbot[opt] and Color3.fromRGB(55,150,85) or Color3.fromRGB(90,40,40)
-        end)
-    end
-
-    AimbotToggleButton("Aimbot Aç/Kapat","enabled",sectionY)
-    sectionY = sectionY + 30
-    AimbotToggleButton("SilentAim Aç/Kapat","silent",sectionY)
-    sectionY = sectionY + 38
-
-    local modes = {"Head","Body","ClosestPart"}
-    local mlabel = Instance.new("TextLabel",frame)
-    mlabel.Position = UDim2.new(0,22,0,sectionY)
-    mlabel.Size = UDim2.new(0,60,0,23)
-    mlabel.Text = "Hedef:"
-    mlabel.Font = Enum.Font.SourceSans
-    mlabel.TextColor3 = Color3.fromRGB(255,255,255)
-    mlabel.BackgroundTransparency = 1
-
-    local modeBtn = Instance.new("TextButton",frame)
-    modeBtn.Position = UDim2.new(0,74,0,sectionY)
-    modeBtn.Size = UDim2.new(0,77,0,23)
-    modeBtn.Text = Aimbot.targetmode
-    modeBtn.BackgroundColor3 = Color3.fromRGB(30,75,90)
-    modeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    modeBtn.Font = Enum.Font.SourceSansBold
-    modeBtn.BorderSizePixel = 0
-    modeBtn.MouseButton1Click:Connect(function()
-        local i = table.find(modes,Aimbot.targetmode) or 1
-        i = i+1> #modes and 1 or i+1
-        Aimbot.targetmode = modes[i]
-        modeBtn.Text = Aimbot.targetmode
+    local sel = Instance.new("TextButton",main)
+    sel.Position = UDim2.new(0.59,0,0,y)
+    sel.Size = UDim2.new(0,97,0,33)
+    sel.Text = Aimbot.targetmode
+    sel.BackgroundColor3 = Color3.fromRGB(30,75,90)
+    sel.TextColor3 = Color3.fromRGB(255,255,255)
+    sel.Font = Enum.Font.FredokaOne
+    sel.BorderSizePixel = 0
+    sel.TextSize = 17
+    sel.MouseButton1Click:Connect(function()
+        local i = table.find(list,Aimbot.targetmode) or 1
+        i = i+1> #list and 1 or i+1
+        Aimbot.targetmode = list[i]
+        sel.Text = Aimbot.targetmode
     end)
 
-    sectionY = sectionY + 32
+    btn("Aimbot Aç/Kapat","enabled",y+54,2)
+    btn("SilentAim Aç/Kapat","silent",y+108,2)
 
-    local fovLabel = Instance.new("TextLabel",frame)
-    fovLabel.Position = UDim2.new(0,22,0,sectionY)
-    fovLabel.Size = UDim2.new(0,40,0,23)
-    fovLabel.Text = "FOV:"
-    fovLabel.Font = Enum.Font.SourceSans
-    fovLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    fovLabel.BackgroundTransparency = 1
+    local fovl = Instance.new("TextLabel",main)
+    fovl.Position = UDim2.new(0.5,5,0,y+162)
+    fovl.Size = UDim2.new(0,45,0,29)
+    fovl.BackgroundTransparency = 1
+    fovl.Text = "FOV:"
+    fovl.Font = Enum.Font.FredokaOne
+    fovl.TextColor3 = Color3.fromRGB(255,255,255)
+    fovl.TextSize = 17
 
-    local fovBox = Instance.new("TextBox",frame)
-    fovBox.Position = UDim2.new(0,62,0,sectionY)
-    fovBox.Size = UDim2.new(0,68,0,23)
-    fovBox.Text = tostring(Aimbot.fov)
-    fovBox.BackgroundColor3 = Color3.fromRGB(44,38,60)
-    fovBox.TextColor3 = Color3.fromRGB(255,255,255)
-    fovBox.Font = Enum.Font.SourceSansBold
-    fovBox.ClearTextOnFocus = false
-    fovBox.BorderSizePixel = 0
-    fovBox.FocusLost:Connect(function()
-        local v = tonumber(fovBox.Text)
+    local fovb = Instance.new("TextBox",main)
+    fovb.Position = UDim2.new(0.62,0,0,y+162)
+    fovb.Size = UDim2.new(0,77,0,29)
+    fovb.Text = tostring(Aimbot.fov)
+    fovb.BackgroundColor3 = Color3.fromRGB(44,38,60)
+    fovb.TextColor3 = Color3.fromRGB(255,255,255)
+    fovb.Font = Enum.Font.FredokaOne
+    fovb.ClearTextOnFocus = false
+    fovb.BorderSizePixel = 0
+    fovb.TextSize = 17
+    fovb.FocusLost:Connect(function()
+        local v = tonumber(fovb.Text)
         if v and v <= 650 and v >= 10 then
             Aimbot.fov = v
         else
-            fovBox.Text = tostring(Aimbot.fov)
+            fovb.Text = tostring(Aimbot.fov)
         end
     end)
 end
 
-CreateMenu()
+CreatePasswordMenu(CreateMenu)
 
 game:GetService("UserInputService").InputBegan:Connect(function(inp,gp)
     if gp then return end
     if inp.KeyCode == Enum.KeyCode.Insert then
-        local gui = game.CoreGui:FindFirstChild("NebulaBloxstrikeMenu")
-        if gui then
-            gui.Enabled = not gui.Enabled
+        local main = game.CoreGui:FindFirstChild("NebulaBloxstrikeMenu")
+        if main then
+            main.Enabled = not main.Enabled
         else
             CreateMenu()
         end
