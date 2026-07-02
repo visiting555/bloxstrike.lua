@@ -47,10 +47,10 @@ end
 
 local function clearDrawings()
     for _,obj in pairs(DrawingObjects) do
-        obj.Visible = false
-        if typeof(obj) == "table" then
+        if typeof(obj) == "Instance" or typeof(obj) == "table" then
             if typeof(obj.Remove) == "function" then obj:Remove() elseif typeof(obj.Destroy) == "function" then obj:Destroy() end
         end
+        obj.Visible = false
     end
     DrawingObjects = {}
 end
@@ -66,20 +66,23 @@ local function drawBox(plr, color)
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
-    local modelSize = Vector3.new(4, 7, 1.6)
+    local size = root.Size
     local cframe = root.CFrame
+    local w, h = size.X, size.Y
     local points = {}
     for _,vec in ipairs({
-        Vector3.new(-modelSize.X/2,modelSize.Y/2,0), Vector3.new(modelSize.X/2,modelSize.Y/2,0),
-        Vector3.new(modelSize.X/2,-modelSize.Y/2,0), Vector3.new(-modelSize.X/2,-modelSize.Y/2,0)
+        Vector3.new(-w/2, h/2, 0), Vector3.new(w/2, h/2, 0),
+        Vector3.new(w/2, -h/2, 0), Vector3.new(-w/2, -h/2, 0)
     }) do
-        local wpos = (cframe * CFrame.new(vec)).Position
-        local scr, onscr = WorldToScreen(wpos)
-        if not onscr then return end table.insert(points, scr)
+        local world = (cframe * CFrame.new(vec)).Position
+        local scr, onscr = WorldToScreen(world)
+        if not onscr then return end
+        table.insert(points, scr)
     end
     for i=1,#points do
+        local nexti = (i%#points)+1
         local ln = Drawing.new("Line")
-        ln.From, ln.To = points[i], points[(i%#points)+1]
+        ln.From, ln.To = points[i], points[nexti]
         ln.Color = color
         ln.Thickness, ln.Transparency, ln.Visible = 2, 1, true
         table.insert(DrawingObjects, ln)
@@ -157,7 +160,7 @@ local function drawHeadCircle(plr, color)
         cir.Position = pos
         cir.Color = color
         cir.Transparency = 1
-        cir.Radius = 16 -- sabit boyut (uzaklığa göre değişmez)
+        cir.Radius = 16
         cir.Thickness = 2
         cir.NumSides = 30
         cir.Filled = false
@@ -381,6 +384,17 @@ local function setInvisible(enable)
             end
         end
     end
+    if workspace:FindFirstChild("Players") then
+        for _,other in ipairs(workspace.Players:GetChildren()) do
+            if other ~= LocalPlayer.Character then
+                for _,v in ipairs(other:GetDescendants()) do
+                    if v:IsA("BasePart") and v.Transparency > 0.98 then
+                        v.Transparency = 0
+                    end
+                end
+            end
+        end
+    end
 end
 local function addSpinbot(enable)
     if SpinConn then SpinConn:Disconnect() SpinConn=nil end
@@ -525,7 +539,6 @@ local function openMenu()
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false isMenuOpen=false end)
 
-    -- ESP
     local yFrm, xFrm = 45, {ESP=0.024, Aimbot=0.38, Ex=0.66}
     local spacing = 29
     local function button(xx,yy,w,text,param,field,onToggle)
@@ -574,7 +587,6 @@ local function openMenu()
         clrBtn.BackgroundColor3 = Settings.ESP.Color
     end)
 
-    -- Aimbot
     button(xFrm.Aimbot, yFrm, 140, "Aimbot", Settings.Aimbot, "Enabled")
     button(xFrm.Aimbot, yFrm+spacing, 140, "SilentAim", Settings.Aimbot, "Silent")
     local modes = {"Head","Body","ClosestPart"}
@@ -624,7 +636,6 @@ local function openMenu()
         end
     end)
 
-    -- Extra
     button(xFrm.Ex, yFrm, 120, "NoClip", Settings.Extra, "Noclip", handleExtras)
     button(xFrm.Ex, yFrm+spacing, 120, "Fly", Settings.Extra, "Fly", handleExtras)
     button(xFrm.Ex, yFrm+spacing*2, 120, "Görünmez", Settings.Extra, "Invisible", handleExtras)
