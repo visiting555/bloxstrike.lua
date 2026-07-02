@@ -1,7 +1,20 @@
-if type(syn) == "table" and syn.protect_gui then
-    getgenv().ProtectGui = syn.protect_gui
-else
-    getgenv().ProtectGui = function(g) pcall(function() g.Parent = game:GetService("CoreGui") end) end
+local setparent = sethiddenproperty or set_hidden_property or setparent or function(obj, parent) pcall(function() obj.Parent = parent end) end
+
+local function ProtectGui(g)
+    if typeof(gethui) == "function" then
+        setparent(g, gethui())
+    else
+        local success = pcall(function()
+            if type(syn) == "table" and syn.protect_gui then
+                syn.protect_gui(g)
+            else
+                setparent(g, game:GetService("CoreGui"))
+            end
+        end)
+        if not success then
+            setparent(g, game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"))
+        end
+    end
 end
 
 local ESP = {
@@ -23,15 +36,13 @@ local Aimbot = {
 }
 
 local function IsEnemy(player)
-    if player == game.Players.LocalPlayer then return false end
-    if player.Team ~= nil and game.Players.LocalPlayer.Team ~= nil then
-        if player.Team == game.Players.LocalPlayer.Team then return false end
-    end
+    local lp = game.Players.LocalPlayer
+    if player == lp then return false end
+    if player.Team ~= nil and lp.Team ~= nil and player.Team == lp.Team then return false end
     if player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    and player.Character:FindFirstChild("HumanoidRootPart")
-    and player.Character:FindFirstChild("Head")
-    and player.Character:FindFirstChildOfClass("Humanoid").Health > 0
-    then
+            and player.Character:FindFirstChild("HumanoidRootPart")
+            and player.Character:FindFirstChild("Head")
+            and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
         return true
     end
     return false
@@ -50,120 +61,110 @@ end
 local function WorldToScreen(pos)
     local cam = workspace.CurrentCamera
     local screen, onScreen = cam:WorldToViewportPoint(pos)
-    return screen,onScreen
+    return screen, onScreen
 end
 
 local drawings = {}
 
 local function ClearDrawings()
-    for _,d in ipairs(drawings) do pcall(function() d.Visible = false d:Remove() end) end
+    for _,obj in ipairs(drawings) do
+        pcall(function()
+            obj.Visible = false
+            if obj.Remove then obj:Remove() elseif obj.Destroy then obj:Destroy() end
+        end)
+    end
     drawings = {}
 end
 
-local function DrawBox(plr,color)
+local function DrawBox(plr, color)
     if not (plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")) then return end
     local hrp = plr.Character.HumanoidRootPart
     local size = Vector3.new(4,7,1.6)
-    local corners = {
-        hrp.CFrame * CFrame.new(-size.X/2,size.Y/2,0).Position,
-        hrp.CFrame * CFrame.new(size.X/2,size.Y/2,0).Position,
-        hrp.CFrame * CFrame.new(size.X/2,-size.Y/2,0).Position,
-        hrp.CFrame * CFrame.new(-size.X/2,-size.Y/2,0).Position,
-    }
     local points = {}
-    for _,corner in ipairs(corners) do
-        local pt,os = WorldToScreen(corner)
-        if os then table.insert(points,pt) end
+    for _, vec in ipairs({
+        Vector3.new(-size.X/2,size.Y/2,0),
+        Vector3.new(size.X/2,size.Y/2,0),
+        Vector3.new(size.X/2,-size.Y/2,0),
+        Vector3.new(-size.X/2,-size.Y/2,0)
+    }) do
+        local pt, os = WorldToScreen((hrp.CFrame * CFrame.new(vec)).Position)
+        if os then table.insert(points, pt) end
     end
-    if #points==4 then
-        local l1 = Drawing.new("Line")
-        l1.From = Vector2.new(points[1].X, points[1].Y)
-        l1.To   = Vector2.new(points[2].X, points[2].Y)
-        l1.Color = color
-        l1.Thickness = 2
-        l1.Transparency = 1
-        l1.Visible = ESP.enabled and ESP.box
-        table.insert(drawings,l1)
-        local l2 = Drawing.new("Line")
-        l2.From = Vector2.new(points[2].X, points[2].Y)
-        l2.To   = Vector2.new(points[3].X, points[3].Y)
-        l2.Color = color
-        l2.Thickness = 2
-        l2.Transparency = 1
-        l2.Visible = ESP.enabled and ESP.box
-        table.insert(drawings,l2)
-        local l3 = Drawing.new("Line")
-        l3.From = Vector2.new(points[3].X, points[3].Y)
-        l3.To   = Vector2.new(points[4].X, points[4].Y)
-        l3.Color = color
-        l3.Thickness = 2
-        l3.Transparency = 1
-        l3.Visible = ESP.enabled and ESP.box
-        table.insert(drawings,l3)
-        local l4 = Drawing.new("Line")
-        l4.From = Vector2.new(points[4].X, points[4].Y)
-        l4.To   = Vector2.new(points[1].X, points[1].Y)
-        l4.Color = color
-        l4.Thickness = 2
-        l4.Transparency = 1
-        l4.Visible = ESP.enabled and ESP.box
-        table.insert(drawings,l4)
+    if #points == 4 then
+        for i = 1,4 do
+            local l = Drawing.new("Line")
+            l.From = Vector2.new(points[i].X, points[i].Y)
+            l.To = Vector2.new(points[(i%4)+1].X, points[(i%4)+1].Y)
+            l.Color = color
+            l.Thickness = 2
+            l.Transparency = 1
+            l.Visible = ESP.enabled and ESP.box
+            table.insert(drawings, l)
+        end
     end
 end
 
-local function DrawName(plr,color)
+local function DrawName(plr, color)
     if not (plr.Character and plr.Character:FindFirstChild("Head")) then return end
     local head = plr.Character.Head.Position
-    local s,os = WorldToScreen(head)
+    local s, os = WorldToScreen(head)
     if os then
         local txt = Drawing.new("Text")
         txt.Text = plr.Name
-        txt.Position = Vector2.new(s.X,s.Y-26)
+        txt.Position = Vector2.new(s.X, s.Y-26)
         txt.Size = 16
         txt.Color = color
         txt.Center = true
         txt.Visible = ESP.enabled and ESP.name
         txt.Outline = true
-        table.insert(drawings,txt)
+        table.insert(drawings, txt)
     end
 end
 
-local function DrawDistance(plr,color)
+local function DrawDistance(plr, color)
     if not (plr.Character and plr.Character:FindFirstChild("Head")) then return end
     local head = plr.Character.Head.Position
     local plrpos = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not plrpos then return end
     local dist = (plrpos.Position - head).Magnitude
-    local s,os = WorldToScreen(head)
+    local s, os = WorldToScreen(head)
     if os then
         local txt = Drawing.new("Text")
         txt.Text = "["..math.floor(dist).."m]"
-        txt.Position = Vector2.new(s.X,s.Y-10)
+        txt.Position = Vector2.new(s.X, s.Y-10)
         txt.Size = 13
         txt.Color = color
         txt.Center = true
         txt.Visible = ESP.enabled and ESP.distance
         txt.Outline = true
-        table.insert(drawings,txt)
+        table.insert(drawings, txt)
     end
 end
 
-local function DrawSkeleton(plr,color)
+local function DrawSkeleton(plr, color)
     if not (plr.Character and plr.Character:FindFirstChild("Head")) then return end
     local bones = {
-        {"Head","UpperTorso"},
-        {"UpperTorso","LowerTorso"},
-        {"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
-        {"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
-        {"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
-        {"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
+        {"Head", "UpperTorso"},
+        {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"},
+        {"LeftLowerArm", "LeftHand"},
+        {"UpperTorso", "RightUpperArm"},
+        {"RightUpperArm", "RightLowerArm"},
+        {"RightLowerArm", "RightHand"},
+        {"LowerTorso", "LeftUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LeftLowerLeg", "LeftFoot"},
+        {"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"},
+        {"RightLowerLeg", "RightFoot"}
     }
     for _,pair in ipairs(bones) do
         local a = plr.Character:FindFirstChild(pair[1])
         local b = plr.Character:FindFirstChild(pair[2])
         if a and b then
-            local aPos,ao = WorldToScreen(a.Position)
-            local bPos,bo = WorldToScreen(b.Position)
+            local aPos, ao = WorldToScreen(a.Position)
+            local bPos, bo = WorldToScreen(b.Position)
             if ao and bo then
                 local l = Drawing.new("Line")
                 l.From = Vector2.new(aPos.X,aPos.Y)
@@ -178,13 +179,13 @@ local function DrawSkeleton(plr,color)
     end
 end
 
-local function DrawHeadCircle(plr,color)
+local function DrawHeadCircle(plr, color)
     if not (plr.Character and plr.Character:FindFirstChild("Head")) then return end
     local head = plr.Character.Head.Position
-    local s,os = WorldToScreen(head)
+    local s, os = WorldToScreen(head)
     if os then
         local cir = Drawing.new("Circle")
-        cir.Position = Vector2.new(s.X,s.Y)
+        cir.Position = Vector2.new(s.X, s.Y)
         cir.Color = color
         cir.Transparency = 1
         cir.Radius = 15
@@ -192,7 +193,7 @@ local function DrawHeadCircle(plr,color)
         cir.NumSides = 30
         cir.Filled = false
         cir.Visible = ESP.enabled and ESP.headcircle
-        table.insert(drawings,cir)
+        table.insert(drawings, cir)
     end
 end
 
@@ -200,26 +201,24 @@ local function UpdateESP()
     ClearDrawings()
     if not ESP.enabled then return end
     for _,plr in ipairs(GetPlayers()) do
-        if ESP.box then DrawBox(plr,ESP.color) end
-        if ESP.name then DrawName(plr,ESP.color) end
-        if ESP.distance then DrawDistance(plr,ESP.color) end
-        if ESP.skeleton then DrawSkeleton(plr,ESP.color) end
-        if ESP.headcircle then DrawHeadCircle(plr,ESP.color) end
+        if ESP.box then DrawBox(plr, ESP.color) end
+        if ESP.name then DrawName(plr, ESP.color) end
+        if ESP.distance then DrawDistance(plr, ESP.color) end
+        if ESP.skeleton then DrawSkeleton(plr, ESP.color) end
+        if ESP.headcircle then DrawHeadCircle(plr, ESP.color) end
     end
 end
 
 game:GetService("RunService").RenderStepped:Connect(UpdateESP)
 
 local function GetClosestPart(character)
-    local parts = {"Head","HumanoidRootPart","UpperTorso","LowerTorso","LeftHand","RightHand","LeftFoot","RightFoot"}
+    local mouse = game.Players.LocalPlayer:GetMouse()
     local shortest = math.huge
     local best = nil
-    local cam = workspace.CurrentCamera
-    local mouse = game.Players.LocalPlayer:GetMouse()
-    for _,partname in ipairs(parts) do
+    for _,partname in ipairs({"Head","HumanoidRootPart","UpperTorso","LowerTorso","LeftHand","RightHand","LeftFoot","RightFoot"}) do
         local part = character:FindFirstChild(partname)
         if part then
-            local pos,onScreen = WorldToScreen(part.Position)
+            local pos, onScreen = WorldToScreen(part.Position)
             if onScreen then
                 local dist = (Vector2.new(pos.X,pos.Y) - Vector2.new(mouse.X,mouse.Y)).Magnitude
                 if dist < shortest then
@@ -233,7 +232,7 @@ local function GetClosestPart(character)
 end
 
 local function GetAimbotTarget()
-    local closest,dist = nil,math.huge
+    local closest, dist = nil, math.huge
     local mouse = game.Players.LocalPlayer:GetMouse()
     for _,plr in ipairs(GetPlayers()) do
         if plr.Character then
@@ -246,7 +245,7 @@ local function GetAimbotTarget()
                 targetPart = GetClosestPart(plr.Character)
             end
             if targetPart then
-                local pos,onScreen = WorldToScreen(targetPart.Position)
+                local pos, onScreen = WorldToScreen(targetPart.Position)
                 if onScreen then
                     local d = (Vector2.new(pos.X,pos.Y) - Vector2.new(mouse.X,mouse.Y)).Magnitude
                     if d < Aimbot.fov and d < dist then
@@ -273,7 +272,7 @@ local function AimbotLock()
             part = GetClosestPart(target.Character)
         end
         if part then
-            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position,part.Position)
+            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, part.Position)
             Aimbot.target = target
         else
             Aimbot.target = nil
@@ -310,19 +309,17 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 end)
 
 local function CreatePasswordMenu(onSuccess)
-    for _,g in ipairs((game:GetService("CoreGui"):GetChildren())) do if g.Name == "NebulaPasswordMenu" then g:Destroy() end end
-
+    for _,g in ipairs(game:GetService("CoreGui"):GetChildren()) do if g.Name == "NebulaPasswordMenu" then g:Destroy() end end
     local gui = Instance.new("ScreenGui")
     gui.Name = "NebulaPasswordMenu"
     ProtectGui(gui)
     gui.Enabled = true
 
-    local frame = Instance.new("Frame",gui)
+    local frame = Instance.new("Frame", gui)
     frame.Position = UDim2.new(0.37,0,0.36,0)
     frame.Size = UDim2.new(0,290,0,161)
     frame.BackgroundColor3 = Color3.fromRGB(27,27,40)
     frame.BorderSizePixel = 0
-    frame.Name = "PasswordFrame"
     frame.Active = true
     frame.Draggable = true
 
@@ -605,7 +602,7 @@ end
 
 CreatePasswordMenu(CreateMenu)
 
-game:GetService("UserInputService").InputBegan:Connect(function(inp,gp)
+game:GetService("UserInputService").InputBegan:Connect(function(inp, gp)
     if gp then return end
     if inp.KeyCode == Enum.KeyCode.Insert then
         local main = game:GetService("CoreGui"):FindFirstChild("NebulaBloxstrikeMenu")
