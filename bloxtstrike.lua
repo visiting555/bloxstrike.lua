@@ -35,7 +35,38 @@ if setfflag then
         setfflag("CrashUploadToBacktraceLinux", "False")
         setfflag("CrashUploadToBacktraceAndroid", "False")
         setfflag("CrashUploadToBacktraceIOS", "False")
+        if setfflag and typeof(writefile)=="function" and typeof(readfile)=="function" then
+            local b = ({pcall(function() return getrenv() end)})
+            if b and typeof(b[2])=="table" then
+                for k,v in pairs(b[2]) do
+                    if typeof(v)=="function" and getfenv and rawequal(getfenv(v),getfenv(0)) then
+                        if debug and debug.info then
+                            local nm = debug.info(v,"s")
+                            if nm and (string.find(nm,"Anti") or string.find(nm,"anticheat") or string.find(nm,"Bypass") or string.find(nm,"Detected")) then
+                                setfenv(v,function() return end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end)
+end
+
+for _,con in pairs(getconnections(game:GetService("LogService").MessageOut)) do
+    pcall(function() con:Disable() end)
+end
+for _,con in pairs(getconnections(game.DescendantAdded)) do
+    pcall(function() con:Disable() end)
+end
+for _,con in pairs(getconnections(game.DescendantRemoving)) do
+    pcall(function() con:Disable() end)
+end
+if setreadonly then
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    rawset(mt, "__newindex", function(...) return end)
+    setreadonly(mt, true)
 end
 
 local ESP, Aimbot = {
@@ -395,22 +426,43 @@ local function EnableFly(state)
 end
 
 local function EnableInvisible(state)
+    -- Geliştirilmiş görünmezlik: karakterdeki tüm parçaların Transparency ayarları, MeshParts takma, ve yerel görünümü de kaldır
     if LocalPlayer.Character then
         for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") or v:IsA("Decal") then
-                if state then
-                    if v:IsA("BasePart") then
-                        v.LocalTransparencyModifier = 1
-                    elseif v:IsA("Decal") then
-                        v.Transparency = 1
-                    end
-                else
-                    if v:IsA("BasePart") then
-                        v.LocalTransparencyModifier = 0
-                    elseif v:IsA("Decal") then
-                        v.Transparency = 0
+            if v:IsA("BasePart") then
+                v.LocalTransparencyModifier = state and 1 or 0
+                v.Transparency = state and 1 or 0
+                -- MeshPart için Mesh'i de kontrol et
+                if v:IsA("MeshPart") and v:FindFirstChildOfClass("SpecialMesh") then
+                    local mesh = v:FindFirstChildOfClass("SpecialMesh")
+                    mesh.Transparency = state and 1 or 0
+                end
+            elseif v:IsA("Decal") then
+                v.Transparency = state and 1 or 0
+            elseif v:IsA("Accessory") then
+                if v:FindFirstChildWhichIsA("BasePart") then
+                    v:FindFirstChildWhichIsA("BasePart").Transparency = state and 1 or 0
+                    v:FindFirstChildWhichIsA("BasePart").LocalTransparencyModifier = state and 1 or 0
+                end
+                for _,d in ipairs(v:GetDescendants()) do
+                    if d:IsA("Decal") then
+                        d.Transparency = state and 1 or 0
                     end
                 end
+            elseif v:IsA("ParticleEmitter") or v:IsA("BillboardGui") or v:IsA("Beam") then
+                v.Enabled = not state
+            end
+        end
+        if LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            if state then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").NameDisplayDistance = 0
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").HealthDisplayDistance = 0
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").BreakJointsOnDeath = false
+            else
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").NameDisplayDistance = 100
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").HealthDisplayDistance = 100
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
             end
         end
         lastInvisible = state
