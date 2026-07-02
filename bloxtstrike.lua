@@ -35,19 +35,34 @@ for _,c in pairs(getconnections(game:GetService("LogService").MessageOut)) do pc
 for _,c in pairs(getconnections(game.DescendantAdded)) do pcall(function() c:Disable() end) end
 for _,c in pairs(getconnections(game.DescendantRemoving)) do pcall(function() c:Disable() end) end
 
-local ESP, Aimbot = {
+local ESP = {
     enabled = false, box = false, distance = false, name = false, skeleton = false, headcircle = false,
-    color = Color3.fromRGB(0,255,255)
-},{
+    tracer = false, chams = false, color = Color3.fromRGB(0,255,255)
+}
+local Aimbot = {
     enabled = false, targetmode = "Head", silent = false, fov = 120, target = nil
 }
-local Extra = { noclip=false, fly=false, invisible=false, spinbot=false }
+local Extra = {
+    noclip=false, fly=false, invisible=false, spinbot=false, cammode="first"
+}
 local flySpeed = 4
 
 local noclipConn, flyConn, spinConn
 local flyControls = {F=false,B=false,L=false,R=false,U=false,D=false}
 local MenuGuiName = "visitingmenu"
 local menuGuiObj
+
+local ChamsList = setmetatable({}, {__mode = "k"})
+local function UpdateChams()
+    for k,v in pairs(ChamsList) do
+        if typeof(v) == "table" then
+            for _,p in pairs(v) do
+                if p and p.Parent then p:Destroy() end
+            end
+        end
+    end
+    table.clear(ChamsList)
+end
 
 local function IsEnemy(plr)
     if not plr or plr == LocalPlayer then return false end
@@ -81,19 +96,21 @@ local function RemoveDraws()
         if typeof(d.Remove)=="function" then d:Remove() elseif typeof(d.Destroy)=="function" then d:Destroy() end
         drawings[d] = nil
     end
+    UpdateChams()
 end
 
 local function DrawBox(plr, color)
     local chr = plr.Character
     if not chr or not chr:FindFirstChild("HumanoidRootPart") then return end
     local hrp = chr.HumanoidRootPart
-    local size = Vector3.new(4,7,1.6)
-    local parts = {}
-    for _,v in ipairs({
+    local cf,size = hrp.CFrame, Vector3.new(4,7,1.6)
+    local corners = {
         Vector3.new(-size.X/2,size.Y/2,0), Vector3.new(size.X/2,size.Y/2,0),
         Vector3.new(size.X/2,-size.Y/2,0), Vector3.new(-size.X/2,-size.Y/2,0)
-    }) do
-        local p,onscreen = WorldToScreen((hrp.CFrame * CFrame.new(v)).Position)
+    }
+    local parts = {}
+    for _,v in ipairs(corners) do
+        local p,onscreen = WorldToScreen((cf * CFrame.new(v)).Position)
         if onscreen then table.insert(parts,p) end
     end
     if #parts == 4 then
@@ -193,9 +210,48 @@ local function DrawHeadCircle(plr, color)
     end
 end
 
+local function DrawTracer(plr, color)
+    local chr = plr.Character
+    if not chr or not chr:FindFirstChild("HumanoidRootPart") then return end
+    local pos,scr = WorldToScreen(chr.HumanoidRootPart.Position)
+    if scr then
+        local cam = workspace.CurrentCamera
+        local from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+        local ln = Drawing.new("Line")
+        ln.From = from
+        ln.To = Vector2.new(pos.X,pos.Y)
+        ln.Color = color
+        ln.Thickness = 2
+        ln.Visible = ESP.enabled and ESP.tracer
+        ln.Transparency = 1
+        drawings[ln] = true
+    end
+end
+
+local function DrawChams(plr, color)
+    local chr = plr.Character
+    if chr then
+        ChamsList[plr] = ChamsList[plr] or {}
+        for _,p in ipairs(chr:GetDescendants()) do
+            if p:IsA("BasePart") and not p:IsDescendantOf(LocalPlayer.Character) then
+                local b = Instance.new("BoxHandleAdornment")
+                b.Adornee = p
+                b.Size = p.Size + Vector3.new(.05,.05,.05)
+                b.AlwaysOnTop = true
+                b.ZIndex = 5
+                b.Transparency = .6
+                b.Color3 = color
+                b.Parent = workspace.CurrentCamera
+                table.insert(ChamsList[plr], b)
+            end
+        end
+    end
+end
+
 RunService:UnbindFromRenderStep("visitingmenu_esp_cleanup")
 RunService:BindToRenderStep("visitingmenu_esp_cleanup", Enum.RenderPriority.Last.Value+1000, function()
     RemoveDraws()
+    UpdateChams()
     if ESP.enabled then
         for _,plr in ipairs(GetEnemies()) do
             if ESP.box then DrawBox(plr,ESP.color) end
@@ -203,6 +259,8 @@ RunService:BindToRenderStep("visitingmenu_esp_cleanup", Enum.RenderPriority.Last
             if ESP.distance then DrawDistance(plr,ESP.color) end
             if ESP.skeleton then DrawSkeleton(plr,ESP.color) end
             if ESP.headcircle then DrawHeadCircle(plr,ESP.color) end
+            if ESP.tracer then DrawTracer(plr,ESP.color) end
+            if ESP.chams then DrawChams(plr,ESP.color) end
         end
     end
 end)
@@ -237,7 +295,7 @@ local function AimbotTarget()
                 local v,ons = WorldToScreen(tpart.Position)
                 if ons then
                     local d = (Vector2.new(v.X,v.Y) - Vector2.new(mouse.X,mouse.Y)).Magnitude
-                    if d < Aimbot.fov and d < dist then dist,found = d, plr end
+                    if d < Aimbot.fov and d < dist then dist,found = d, {plr=plr,part=tpart} end
                 end
             end
         end
@@ -248,17 +306,12 @@ end
 RunService:UnbindFromRenderStep("visitingmenu_aimbot")
 RunService:BindToRenderStep("visitingmenu_aimbot", Enum.RenderPriority.Camera.Value+200, function()
     if Aimbot.enabled then
-        local trg = AimbotTarget()
-        if trg and trg.Character then
-            local part
-            if Aimbot.targetmode=="Head" then part = trg.Character:FindFirstChild("Head")
-            elseif Aimbot.targetmode=="Body" then part = trg.Character:FindFirstChild("HumanoidRootPart") or trg.Character:FindFirstChild("UpperTorso")
-            elseif Aimbot.targetmode=="ClosestPart" then part = ClosestPart(trg.Character) end
-            if part then
-                workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, part.Position)
-                Aimbot.target = trg
-            else
-                Aimbot.target = nil
+        local trgInfo = AimbotTarget()
+        if trgInfo and trgInfo.plr and trgInfo.part then
+            local c = workspace.CurrentCamera
+            if c then
+                c.CFrame = CFrame.new(c.CFrame.Position, trgInfo.part.Position)
+                Aimbot.target = trgInfo.plr
             end
         else
             Aimbot.target = nil
@@ -269,17 +322,16 @@ end)
 if hookmetamethod and typeof(hookmetamethod)=="function" then
     local old
     old = hookmetamethod(game, "__namecall", function(self, ...)
-        if not checkcaller() and Aimbot.enabled and Aimbot.silent and Aimbot.target and Aimbot.target.Character then
-            local method = getnamecallmethod()
-            if tostring(method) == "FireServer" and tostring(self) == "HitPart" then
-                local args = {...}
-                local part = nil
-                if Aimbot.targetmode=="Head" then part = Aimbot.target.Character:FindFirstChild("Head")
-                elseif Aimbot.targetmode=="Body" then part = Aimbot.target.Character:FindFirstChild("HumanoidRootPart") or Aimbot.target.Character:FindFirstChild("UpperTorso")
-                elseif Aimbot.targetmode=="ClosestPart" then part = ClosestPart(Aimbot.target.Character) end
-                if part and typeof(args[1])=="Instance" and typeof(args[2])=="Vector3" then
-                    args[1],args[2]=part,part.Position
-                    return old(self, unpack(args))
+        if not checkcaller() and Aimbot.enabled and Aimbot.silent then
+            local trgInfo = AimbotTarget()
+            if trgInfo and trgInfo.plr and trgInfo.part then
+                local method = getnamecallmethod()
+                if tostring(method) == "FireServer" and tostring(self) == "HitPart" then
+                    local args = {...}
+                    if typeof(args[1])=="Instance" and typeof(args[2])=="Vector3" then
+                        args[1],args[2]=trgInfo.part,trgInfo.part.Position
+                        return old(self, unpack(args))
+                    end
                 end
             end
         end
@@ -393,6 +445,8 @@ local function EnableInvisible(state)
                 end
             elseif v:IsA("ParticleEmitter") or v:IsA("BillboardGui") or v:IsA("Beam") then
                 v.Enabled = not state
+            elseif v:IsA("HairAccessory") then
+                v.Handle.Transparency = state and 1 or 0
             end
         end
         if LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -422,11 +476,27 @@ local function EnableSpinbot(state)
     end
 end
 
+local function ToggleCamera(mode)
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    if mode=="third" then
+        cam.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        cam.CameraType = Enum.CameraType.Custom
+        cam.FieldOfView = 70
+    elseif mode=="first" then
+        cam.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
+        cam.CameraType = Enum.CameraType.Attach
+        cam.FieldOfView = 70
+    end
+    Extra.cammode = mode
+end
+
 local function HandleToggles()
     EnableNoclip(Extra.noclip)
     EnableFly(Extra.fly)
     EnableInvisible(Extra.invisible)
     EnableSpinbot(Extra.spinbot)
+    ToggleCamera(Extra.cammode)
 end
 
 local function MakeMenu()
@@ -438,12 +508,12 @@ local function MakeMenu()
     ParentGui(gui)
 
     local fr = Instance.new("Frame",gui)
-    fr.Size, fr.Position = UDim2.fromOffset(484,298), UDim2.new(0.32,0,0.18,0)
+    fr.Size, fr.Position = UDim2.fromOffset(594,346), UDim2.new(0.27,0,0.16,0)
     fr.BackgroundColor3 = Color3.fromRGB(20,27,36)
     fr.BorderSizePixel = 0
     fr.Active, fr.Draggable = true, true
     local bar = Instance.new("Frame",fr)
-    bar.Size = UDim2.new(1,0,0,33)
+    bar.Size = UDim2.new(1,0,0,36)
     bar.BackgroundColor3 = Color3.fromRGB(11,44,76)
     bar.Position = UDim2.new(0,0,0,0)
     local tx = Instance.new("TextLabel",bar)
@@ -460,12 +530,12 @@ local function MakeMenu()
     close.TextColor3 = Color3.fromRGB(255,60,60)
     close.TextSize = 16
     close.Size = UDim2.new(0,31,0,28)
-    close.Position = UDim2.new(1,-36,0,3)
+    close.Position = UDim2.new(1,-36,0,4)
     close.BackgroundColor3 = Color3.fromRGB(33,22,18)
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false end)
 
-    local yFrm, xFrm = 45, {ESP=0.03, Aimbot=0.355, Ex=0.68}
+    local yFrm, xFrm = 45, {ESP=0.024, Aimbot=0.335, Ex=0.625}
     local spacing = 29
 
     local function button(xx,yy,width,text,param,field,onToggle)
@@ -492,10 +562,12 @@ local function MakeMenu()
     button(xFrm.ESP, yFrm+spacing*3, 140, "İsim", ESP, "name")
     button(xFrm.ESP, yFrm+spacing*4, 140, "İskelet", ESP, "skeleton")
     button(xFrm.ESP, yFrm+spacing*5, 140, "HeadCircle", ESP, "headcircle")
+    button(xFrm.ESP, yFrm+spacing*6, 140, "Tracer ESP", ESP, "tracer")
+    button(xFrm.ESP, yFrm+spacing*7, 140, "Chams ESP", ESP, "chams")
 
     local clrLab = Instance.new("TextLabel",fr)
     clrLab.Size = UDim2.new(0,50,0,17)
-    clrLab.Position = UDim2.new(xFrm.ESP,10,0,yFrm+spacing*6+2)
+    clrLab.Position = UDim2.new(xFrm.ESP,10,0,yFrm+spacing*8+1)
     clrLab.Text = "Renk:"
     clrLab.BackgroundTransparency = 1
     clrLab.Font = Enum.Font.GothamSemibold
@@ -503,7 +575,7 @@ local function MakeMenu()
     clrLab.TextSize = 13
     local clrBtn = Instance.new("TextButton",fr)
     clrBtn.Size = UDim2.new(0,29,0,17)
-    clrBtn.Position = UDim2.new(xFrm.ESP,68,0,yFrm+spacing*6+2)
+    clrBtn.Position = UDim2.new(xFrm.ESP,68,0,yFrm+spacing*8+1)
     clrBtn.Text = ""
     clrBtn.BackgroundColor3 = ESP.color
     clrBtn.BorderSizePixel = 0
@@ -565,13 +637,33 @@ local function MakeMenu()
         end
     end)
 
-    button(xFrm.Ex, yFrm, 128, "NoClip", Extra, "noclip", HandleToggles)
-    button(xFrm.Ex, yFrm+spacing, 128, "Fly", Extra, "fly", HandleToggles)
-    button(xFrm.Ex, yFrm+spacing*2, 128, "Görünmez", Extra, "invisible", HandleToggles)
-    button(xFrm.Ex, yFrm+spacing*3, 128, "Spinbot", Extra, "spinbot", HandleToggles)
+    button(xFrm.Ex, yFrm, 120, "NoClip", Extra, "noclip", HandleToggles)
+    button(xFrm.Ex, yFrm+spacing, 120, "Fly", Extra, "fly", HandleToggles)
+    button(xFrm.Ex, yFrm+spacing*2, 120, "Görünmez", Extra, "invisible", HandleToggles)
+    button(xFrm.Ex, yFrm+spacing*3, 120, "Spinbot", Extra, "spinbot", HandleToggles)
+
+    local camLbl = Instance.new("TextLabel",fr)
+    camLbl.Position = UDim2.new(xFrm.Ex,0,0,yFrm+spacing*4)
+    camLbl.Size = UDim2.new(0,60,0,16)
+    camLbl.Text = "Kamera"
+    camLbl.Font = Enum.Font.GothamSemibold
+    camLbl.TextColor3 = Color3.fromRGB(255,255,255)
+    camLbl.TextSize = 13 camLbl.BackgroundTransparency = 1
+    local camBut = Instance.new("TextButton", fr)
+    camBut.Position = UDim2.new(xFrm.Ex,66,0,yFrm+spacing*4-1)
+    camBut.Size = UDim2.new(0,54,0,18)
+    camBut.Text = (Extra.cammode=="first" and "1. Şahıs" or "3. Şahıs")
+    camBut.Font = Enum.Font.GothamSemibold camBut.TextSize = 13 camBut.BackgroundColor3 = Color3.fromRGB(38,37,62)
+    camBut.TextColor3 = Color3.fromRGB(255,255,255)
+    camBut.BorderSizePixel = 0
+    camBut.MouseButton1Click:Connect(function()
+        if Extra.cammode=="first" then Extra.cammode="third" else Extra.cammode="first" end
+        camBut.Text = (Extra.cammode=="first" and "1. Şahıs" or "3. Şahıs")
+        ToggleCamera(Extra.cammode)
+    end)
 
     local fLab = Instance.new("TextLabel",fr)
-    fLab.Position = UDim2.new(xFrm.Ex,0,0,yFrm+spacing*4+1)
+    fLab.Position = UDim2.new(xFrm.Ex,0,0,yFrm+spacing*5)
     fLab.Size = UDim2.new(0,63,0,16)
     fLab.Text = "Fly Hızı"
     fLab.Font = Enum.Font.GothamSemibold
@@ -579,7 +671,7 @@ local function MakeMenu()
     fLab.TextSize = 13 fLab.BackgroundTransparency = 1
 
     local flySliderF = Instance.new("Frame", fr)
-    flySliderF.Position = UDim2.new(xFrm.Ex,63,0,yFrm+spacing*4+5)
+    flySliderF.Position = UDim2.new(xFrm.Ex,63,0,yFrm+spacing*5+2)
     flySliderF.Size = UDim2.new(0,56,0,8)
     flySliderF.BackgroundColor3 = Color3.fromRGB(60,60,60)
     flySliderF.BorderSizePixel = 0
@@ -591,7 +683,7 @@ local function MakeMenu()
     Sknob.Active, Sknob.Draggable = true, true
 
     local flyval = Instance.new("TextBox", fr)
-    flyval.Position = UDim2.new(xFrm.Ex,125,0,yFrm+spacing*4)
+    flyval.Position = UDim2.new(xFrm.Ex,121,0,yFrm+spacing*5)
     flyval.Size = UDim2.new(0,33,0,16)
     flyval.Text = tostring(flySpeed)
     flyval.BackgroundColor3 = Color3.fromRGB(38,37,62)
@@ -627,6 +719,7 @@ local function MakeMenu()
         end
     end)
     gui.Enabled = true
+    ToggleCamera(Extra.cammode)
 end
 
 local function ShowPassword(cb)
