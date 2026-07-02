@@ -1,6 +1,8 @@
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
 local function ParentGui(gui)
     local parentTarget
@@ -20,24 +22,10 @@ local function ParentGui(gui)
     gui.Parent = parentTarget
 end
 
-if setfflag then
-    pcall(function()
-        setfflag("AbuseReportScreenshot", "False")
-        setfflag("AbuseReportScreenshotPercentage", "0")
-        setfflag("CrashUploadToBacktraceToBacktraceToBacktrace", "False")
-        setfflag("CrashUploadToBacktracePercentage", "0")
-        setfflag("CrashUploadToBacktraceLinux", "False")
-        setfflag("CrashUploadToBacktraceAndroid", "False")
-        setfflag("CrashUploadToBacktraceIOS", "False")
-    end)
-end
 for _,c in pairs(getconnections(game:GetService("LogService").MessageOut)) do pcall(function() c:Disable() end) end
-for _,c in pairs(getconnections(game.DescendantAdded)) do pcall(function() c:Disable() end) end
-for _,c in pairs(getconnections(game.DescendantRemoving)) do pcall(function() c:Disable() end) end
 
 local ESP = {
-    enabled = false, box = false, distance = false, name = false, skeleton = false, headcircle = false,
-    tracer = false, chams = false, color = Color3.fromRGB(0,255,255)
+    enabled = false, box = false, distance = false, name = false, skeleton = false, headcircle = false, tracer = false, chams = false, color = Color3.fromRGB(0,255,255)
 }
 local Aimbot = {
     enabled = false, targetmode = "Head", silent = false, fov = 120, target = nil
@@ -46,44 +34,30 @@ local Extra = {
     noclip=false, fly=false, invisible=false, spinbot=false, cammode="first"
 }
 local flySpeed = 4
-
-local noclipConn, flyConn, spinConn
-local flyControls = {F=false,B=false,L=false,R=false,U=false,D=false}
 local MenuGuiName = "visitingmenu"
 local menuGuiObj
-
-local ChamsList = setmetatable({}, {__mode = "k"})
-local function UpdateChams()
-    for k,v in pairs(ChamsList) do
-        if typeof(v) == "table" then
-            for _,p in pairs(v) do
-                if p and p.Parent then p:Destroy() end
-            end
-        end
-    end
-    table.clear(ChamsList)
-end
 
 local function IsEnemy(plr)
     if not plr or plr == LocalPlayer then return false end
     if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team and #game:GetService("Teams"):GetTeams()>1 then return false end
-    if plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
-        and plr.Character:FindFirstChild("HumanoidRootPart")
-        and plr.Character:FindFirstChild("Head")
-        and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+    local chr = plr.Character
+    if chr and chr:FindFirstChildOfClass("Humanoid") and chr:FindFirstChild("HumanoidRootPart") and chr:FindFirstChild("Head") and chr:FindFirstChildOfClass("Humanoid").Health > 0 then
         return true
     end
     return false
 end
+
 local function GetEnemies()
     local arr = {}
-    for _,p in ipairs(game:GetService("Players"):GetPlayers()) do
+    for _,p in ipairs(Players:GetPlayers()) do
         if IsEnemy(p) then table.insert(arr, p) end
     end
     return arr
 end
+
+local cam = Workspace.CurrentCamera
 local function WorldToScreen(vec)
-    local cam = workspace.CurrentCamera
+    cam = Workspace.CurrentCamera
     if not cam then return Vector3.zero, false end
     local pos,vis = cam:WorldToViewportPoint(vec)
     return pos, vis
@@ -96,7 +70,6 @@ local function RemoveDraws()
         if typeof(d.Remove)=="function" then d:Remove() elseif typeof(d.Destroy)=="function" then d:Destroy() end
         drawings[d] = nil
     end
-    UpdateChams()
 end
 
 local function DrawBox(plr, color)
@@ -111,19 +84,17 @@ local function DrawBox(plr, color)
     local parts = {}
     for _,v in ipairs(corners) do
         local p,onscreen = WorldToScreen((cf * CFrame.new(v)).Position)
-        if onscreen then table.insert(parts,p) end
+        if onscreen then table.insert(parts,p) else return end
     end
-    if #parts == 4 then
-        for i=1,4 do
-            local ln = Drawing.new("Line")
-            ln.From = Vector2.new(parts[i].X,parts[i].Y)
-            ln.To = Vector2.new(parts[(i%4)+1].X,parts[(i%4)+1].Y)
-            ln.Color = color
-            ln.Thickness = 2
-            ln.Visible = ESP.enabled and ESP.box
-            ln.Transparency = 1
-            drawings[ln] = true
-        end
+    for i=1,4 do
+        local ln = Drawing.new("Line")
+        ln.From = Vector2.new(parts[i].X,parts[i].Y)
+        ln.To = Vector2.new(parts[(i%4)+1].X,parts[(i%4)+1].Y)
+        ln.Color = color
+        ln.Thickness = 2
+        ln.Visible = ESP.enabled and ESP.box
+        ln.Transparency = 1
+        drawings[ln] = true
     end
 end
 
@@ -215,7 +186,7 @@ local function DrawTracer(plr, color)
     if not chr or not chr:FindFirstChild("HumanoidRootPart") then return end
     local pos,scr = WorldToScreen(chr.HumanoidRootPart.Position)
     if scr then
-        local cam = workspace.CurrentCamera
+        cam = Workspace.CurrentCamera
         local from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
         local ln = Drawing.new("Line")
         ln.From = from
@@ -228,21 +199,41 @@ local function DrawTracer(plr, color)
     end
 end
 
+local ChamsList = setmetatable({}, {__mode = "k"})
+local function RemoveChams()
+    for k,v in pairs(ChamsList) do
+        if typeof(v) == "table" then
+            for _,p in pairs(v) do
+                if p and p.Parent then p:Destroy() end
+            end
+        end
+        ChamsList[k] = nil
+    end
+end
 local function DrawChams(plr, color)
     local chr = plr.Character
     if chr then
-        ChamsList[plr] = ChamsList[plr] or {}
-        for _,p in ipairs(chr:GetDescendants()) do
-            if p:IsA("BasePart") and not p:IsDescendantOf(LocalPlayer.Character) then
-                local b = Instance.new("BoxHandleAdornment")
-                b.Adornee = p
-                b.Size = p.Size + Vector3.new(.05,.05,.05)
-                b.AlwaysOnTop = true
-                b.ZIndex = 5
-                b.Transparency = .6
-                b.Color3 = color
-                b.Parent = workspace.CurrentCamera
-                table.insert(ChamsList[plr], b)
+        if not ChamsList[plr] then ChamsList[plr] = {} end
+        if #ChamsList[plr] == 0 then
+            for _,p in ipairs(chr:GetDescendants()) do
+                if p:IsA("BasePart") and not p:IsDescendantOf(LocalPlayer.Character) then
+                    local b = Instance.new("BoxHandleAdornment")
+                    b.Adornee = p
+                    b.Size = p.Size + Vector3.new(.08,.08,.08)
+                    b.AlwaysOnTop = true
+                    b.ZIndex = 5
+                    b.Transparency = .6
+                    b.Color3 = color
+                    b.Parent = Workspace.CurrentCamera
+                    table.insert(ChamsList[plr], b)
+                end
+            end
+        else
+            for _,box in ipairs(ChamsList[plr]) do
+                pcall(function()
+                    box.Color3 = color
+                    box.Visible = (ESP.enabled and ESP.chams) and true or false
+                end)
             end
         end
     end
@@ -251,7 +242,7 @@ end
 RunService:UnbindFromRenderStep("visitingmenu_esp_cleanup")
 RunService:BindToRenderStep("visitingmenu_esp_cleanup", Enum.RenderPriority.Last.Value+1000, function()
     RemoveDraws()
-    UpdateChams()
+    if not ESP.enabled or not Workspace.CurrentCamera then RemoveChams() end
     if ESP.enabled then
         for _,plr in ipairs(GetEnemies()) do
             if ESP.box then DrawBox(plr,ESP.color) end
@@ -262,6 +253,8 @@ RunService:BindToRenderStep("visitingmenu_esp_cleanup", Enum.RenderPriority.Last
             if ESP.tracer then DrawTracer(plr,ESP.color) end
             if ESP.chams then DrawChams(plr,ESP.color) end
         end
+    else
+        RemoveChams()
     end
 end)
 
@@ -303,19 +296,23 @@ local function AimbotTarget()
     return found
 end
 
+local aimInputHeld = false
 RunService:UnbindFromRenderStep("visitingmenu_aimbot")
 RunService:BindToRenderStep("visitingmenu_aimbot", Enum.RenderPriority.Camera.Value+200, function()
-    if Aimbot.enabled then
+    if Aimbot.enabled and aimInputHeld then
         local trgInfo = AimbotTarget()
         if trgInfo and trgInfo.plr and trgInfo.part then
-            local c = workspace.CurrentCamera
+            local c = Workspace.CurrentCamera
             if c then
-                c.CFrame = CFrame.new(c.CFrame.Position, trgInfo.part.Position)
+                local cpos = c.CFrame.Position
+                c.CFrame = CFrame.new(cpos, trgInfo.part.Position)
                 Aimbot.target = trgInfo.plr
             end
         else
             Aimbot.target = nil
         end
+    else
+        Aimbot.target = nil
     end
 end)
 
@@ -326,18 +323,46 @@ if hookmetamethod and typeof(hookmetamethod)=="function" then
             local trgInfo = AimbotTarget()
             if trgInfo and trgInfo.plr and trgInfo.part then
                 local method = getnamecallmethod()
-                if tostring(method) == "FireServer" and tostring(self) == "HitPart" then
+                if tostring(method):lower():find("fire") and tostring(self):lower():find("hit") then
                     local args = {...}
-                    if typeof(args[1])=="Instance" and typeof(args[2])=="Vector3" then
-                        args[1],args[2]=trgInfo.part,trgInfo.part.Position
-                        return old(self, unpack(args))
+                    for i,arg in pairs(args) do
+                        if typeof(arg)=="Instance" and arg:IsA("BasePart") then
+                            args[i] = trgInfo.part
+                        elseif typeof(arg) == "Vector3" then
+                            args[i] = trgInfo.part.Position
+                        end
                     end
+                    return old(self, unpack(args))
                 end
             end
         end
         return old(self, ...)
     end)
 end
+
+local noclipConn, flyConn, spinConn
+local flyControls = {F=false,B=false,L=false,R=false,U=false,D=false}
+local function SetupFlyKeys()
+    UIS.InputBegan:Connect(function(i,gp)
+        if gp then return end
+        if i.KeyCode==Enum.KeyCode.W then flyControls.F=true end
+        if i.KeyCode==Enum.KeyCode.S then flyControls.B=true end
+        if i.KeyCode==Enum.KeyCode.A then flyControls.L=true end
+        if i.KeyCode==Enum.KeyCode.D then flyControls.R=true end
+        if i.KeyCode==Enum.KeyCode.Space then flyControls.U=true end
+        if i.KeyCode==Enum.KeyCode.LeftControl then flyControls.D=true end
+    end)
+    UIS.InputEnded:Connect(function(i,gp)
+        if gp then return end
+        if i.KeyCode==Enum.KeyCode.W then flyControls.F=false end
+        if i.KeyCode==Enum.KeyCode.S then flyControls.B=false end
+        if i.KeyCode==Enum.KeyCode.A then flyControls.L=false end
+        if i.KeyCode==Enum.KeyCode.D then flyControls.R=false end
+        if i.KeyCode==Enum.KeyCode.Space then flyControls.U=false end
+        if i.KeyCode==Enum.KeyCode.LeftControl then flyControls.D=false end
+    end)
+end
+SetupFlyKeys()
 
 local function DisableCollision(part)
     if part:IsA("BasePart") and part.CanCollide then
@@ -380,38 +405,16 @@ local function EnableNoclip(state)
     end
 end
 
-local function SetupFlyKeys()
-    UIS.InputBegan:Connect(function(i,gp)
-        if gp then return end
-        if i.KeyCode==Enum.KeyCode.W then flyControls.F=true end
-        if i.KeyCode==Enum.KeyCode.S then flyControls.B=true end
-        if i.KeyCode==Enum.KeyCode.A then flyControls.L=true end
-        if i.KeyCode==Enum.KeyCode.D then flyControls.R=true end
-        if i.KeyCode==Enum.KeyCode.Space then flyControls.U=true end
-        if i.KeyCode==Enum.KeyCode.LeftControl then flyControls.D=true end
-    end)
-    UIS.InputEnded:Connect(function(i,gp)
-        if gp then return end
-        if i.KeyCode==Enum.KeyCode.W then flyControls.F=false end
-        if i.KeyCode==Enum.KeyCode.S then flyControls.B=false end
-        if i.KeyCode==Enum.KeyCode.A then flyControls.L=false end
-        if i.KeyCode==Enum.KeyCode.D then flyControls.R=false end
-        if i.KeyCode==Enum.KeyCode.Space then flyControls.U=false end
-        if i.KeyCode==Enum.KeyCode.LeftControl then flyControls.D=false end
-    end)
-end
-SetupFlyKeys()
-
 local function EnableFly(state)
     if flyConn then flyConn:Disconnect() flyConn = nil end
     if state then
         flyConn = RunService.RenderStepped:Connect(function()
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local hrp = LocalPlayer.Character.HumanoidRootPart
-                hrp.Velocity = Vector3.new(0,0,0)
-                local cam = workspace.CurrentCamera
-                local cf = cam.CFrame
-                local move = Vector3.new()
+                hrp.Velocity = Vector3.zero
+                local ccam = Workspace.CurrentCamera
+                local cf = ccam.CFrame
+                local move = Vector3.zero
                 if flyControls.F then move = move + cf.LookVector end
                 if flyControls.B then move = move - cf.LookVector end
                 if flyControls.L then move = move - cf.RightVector end
@@ -419,7 +422,7 @@ local function EnableFly(state)
                 if flyControls.U then move = move + cf.UpVector end
                 if flyControls.D then move = move - cf.UpVector end
                 if move.Magnitude > 0 then move = move.Unit else move=Vector3.zero end
-                hrp.Velocity = move * flySpeed * 16
+                hrp.Velocity = move * flySpeed * 13
             end
         end)
     end
@@ -477,16 +480,22 @@ local function EnableSpinbot(state)
 end
 
 local function ToggleCamera(mode)
-    local cam = workspace.CurrentCamera
+    cam = Workspace.CurrentCamera
     if not cam then return end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local head = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
     if mode=="third" then
-        cam.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        cam.CameraType = Enum.CameraType.Custom
-        cam.FieldOfView = 70
+        if hum then
+            cam.CameraSubject = hum
+            cam.CameraType = Enum.CameraType.Custom
+            cam.FieldOfView = 70
+        end
     elseif mode=="first" then
-        cam.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
-        cam.CameraType = Enum.CameraType.Attach
-        cam.FieldOfView = 70
+        if head then
+            cam.CameraSubject = head
+            cam.CameraType = Enum.CameraType.Attach
+            cam.FieldOfView = 70
+        end
     end
     Extra.cammode = mode
 end
@@ -789,5 +798,14 @@ UIS.InputBegan:Connect(function(inp,gp)
     if inp.KeyCode == Enum.KeyCode.F4 then
         local gui = menuGuiObj or game:GetService("CoreGui"):FindFirstChild(MenuGuiName)
         if gui then gui.Enabled = not gui.Enabled else MakeMenu() end
+    end
+    if inp.UserInputType == Enum.UserInputType.MouseButton2 then
+        aimInputHeld = true
+    end
+end)
+UIS.InputEnded:Connect(function(inp,gp)
+    if gp then return end
+    if inp.UserInputType == Enum.UserInputType.MouseButton2 then
+        aimInputHeld = false
     end
 end)
