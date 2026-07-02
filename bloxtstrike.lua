@@ -1,5 +1,3 @@
--- Anticheat bypass and menu/ESP/aim strategy: Full rewrite, minimal dependencies, menu always injects, no custom hooks outside standard exploits, only one main ScreenGui, robust fallback parenting
-
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -44,7 +42,7 @@ local ESP, Aimbot = {
 
 local function IsEnemy(plr)
     if not plr or plr == LocalPlayer then return false end
-    if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team then return false end
+    if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team and #game:GetService("Teams"):GetTeams() > 1 then return false end
     if plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
         and plr.Character:FindFirstChild("HumanoidRootPart")
         and plr.Character:FindFirstChild("Head")
@@ -340,7 +338,7 @@ local function ShowPassword(cb)
     gui.Enabled = true
 end
 
-local MenuGuiName = "NBLX_MenuWnd"
+local MenuGuiName = "visitingmenu"
 local function MakeMenu()
     for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name==MenuGuiName then pcall(function() g:Destroy() end) end end
     local gui = Instance.new("ScreenGui")
@@ -358,7 +356,7 @@ local function MakeMenu()
     bar.BackgroundColor3 = Color3.fromRGB(11,44,76)
     bar.Position = UDim2.new(0,0,0,0)
     local tx = Instance.new("TextLabel",bar)
-    tx.Text = "Nebula Bloxstrike Menü"
+    tx.Text = "visitingmenu"
     tx.Font = Enum.Font.GothamBlack
     tx.TextColor3 = Color3.fromRGB(0,255,255)
     tx.TextSize = 17
@@ -414,7 +412,6 @@ local function MakeMenu()
     Toggle("İskelet", ESP, "skeleton", 0)
     Toggle("HeadCircle", ESP, "headcircle", 0)
 
-    -- ESP color
     local clrLab = Instance.new("TextLabel",fr)
     clrLab.Size = UDim2.new(0,66,0,19)
     clrLab.Position = UDim2.new(0,15,0,y+3)
@@ -435,7 +432,6 @@ local function MakeMenu()
         clrBtn.BackgroundColor3 = ESP.color
     end)
 
-    -- Aimbot sec
     local y2 = 58
     Section("Aimbot",.58,Color3.fromRGB(0,255,160))
     local Aimg = {}
@@ -443,7 +439,6 @@ local function MakeMenu()
     Aimg.silent = Toggle("Silent",Aimbot,"silent",.58)
     y2 = y2 + 62
 
-    -- Aimbot target mode dropdown
     local tgLbl = Instance.new("TextLabel",fr)
     tgLbl.Position = UDim2.new(.58,10,0,y2)
     tgLbl.Size = UDim2.new(0,60,0,18)
@@ -468,7 +463,6 @@ local function MakeMenu()
         sel.Text = Aimbot.targetmode
     end)
 
-    -- FOV setup
     local fovLbl = Instance.new("TextLabel",fr)
     fovLbl.Position = UDim2.new(.58,10,0,y2+23)
     fovLbl.Size = UDim2.new(0,23,0,17)
@@ -496,7 +490,6 @@ local function MakeMenu()
         end
     end)
 
-    -- Instructions
     local ins = Instance.new("TextLabel",fr)
     ins.Text = "Menü: Insert tuşu | discord.gg/nebula-hub"
     ins.Font = Enum.Font.GothamSemibold
