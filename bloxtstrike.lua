@@ -24,6 +24,20 @@ local function ParentGui(gui)
     pcall(function() gui.Parent = goodParent end)
 end
 
+setfflag = setfflag or function(...) end
+if setfflag then
+    pcall(function()
+        setfflag("AbuseReportScreenshot", "False")
+        setfflag("AbuseReportScreenshotPercentage", "0")
+        setfflag("CrashUploadToBacktraceToBacktraceToBacktrace", "False")
+        setfflag("DFStringCrashUploadToBacktraceLastSubmit", "")
+        setfflag("CrashUploadToBacktracePercentage", "0")
+        setfflag("CrashUploadToBacktraceLinux", "False")
+        setfflag("CrashUploadToBacktraceAndroid", "False")
+        setfflag("CrashUploadToBacktraceIOS", "False")
+    end)
+end
+
 local ESP, Aimbot = {
     enabled = false,
     box = false,
@@ -80,15 +94,13 @@ local function WorldToScreen(vec)
     return pos, vis
 end
 
-local drawings = {}
+local drawings = setmetatable({}, {__mode = "k"})
 local function RemoveDraws()
-    for _,d in ipairs(drawings) do
-        pcall(function()
-            d.Visible = false
-            if typeof(d.Remove)=="function" then d:Remove() elseif typeof(d.Destroy)=="function" then d:Destroy() end
-        end)
+    for d,_ in next,drawings do
+        d.Visible = false
+        if typeof(d.Remove)=="function" then d:Remove() elseif typeof(d.Destroy)=="function" then d:Destroy() end
+        drawings[d] = nil
     end
-    table.clear(drawings)
 end
 
 local function DrawBox(plr, color)
@@ -113,7 +125,7 @@ local function DrawBox(plr, color)
             ln.Thickness = 2
             ln.Visible = ESP.enabled and ESP.box
             ln.Transparency = 1
-            table.insert(drawings,ln)
+            drawings[ln] = true
         end
     end
 end
@@ -131,7 +143,7 @@ local function DrawName(plr, color)
         txt.Center = true
         txt.Outline = true
         txt.Visible = ESP.enabled and ESP.name
-        table.insert(drawings,txt)
+        drawings[txt] = true
     end
 end
 
@@ -150,7 +162,7 @@ local function DrawDistance(plr, color)
         txt.Center = true
         txt.Outline = true
         txt.Visible = ESP.enabled and ESP.distance
-        table.insert(drawings,txt)
+        drawings[txt] = true
     end
 end
 
@@ -177,7 +189,7 @@ local function DrawSkeleton(plr, color)
                 ln.Thickness = 2
                 ln.Visible = ESP.enabled and ESP.skeleton
                 ln.Transparency = 1
-                table.insert(drawings,ln)
+                drawings[ln] = true
             end
         end
     end
@@ -192,16 +204,17 @@ local function DrawHeadCircle(plr, color)
         cir.Position = Vector2.new(pos.X,pos.Y)
         cir.Color = color
         cir.Transparency = 1
-        cir.Radius = 15
+        cir.Radius = 16
         cir.Thickness = 2
         cir.NumSides = 30
         cir.Filled = false
         cir.Visible = ESP.enabled and ESP.headcircle
-        table.insert(drawings,cir)
+        drawings[cir] = true
     end
 end
 
-RunService.RenderStepped:Connect(function()
+RunService:UnbindFromRenderStep("visitingmenu_esp_cleanup")
+RunService:BindToRenderStep("visitingmenu_esp_cleanup", Enum.RenderPriority.Last.Value+1000, function()
     RemoveDraws()
     if ESP.enabled then
         for _,plr in ipairs(GetEnemies()) do
@@ -252,7 +265,8 @@ local function AimbotTarget()
     return found
 end
 
-RunService.RenderStepped:Connect(function()
+RunService:UnbindFromRenderStep("visitingmenu_aimbot")
+RunService:BindToRenderStep("visitingmenu_aimbot", Enum.RenderPriority.Camera.Value+200, function()
     if Aimbot.enabled then
         local trg = AimbotTarget()
         if trg and trg.Character then
@@ -293,14 +307,44 @@ if hookmetamethod and typeof(hookmetamethod)=="function" then
     end)
 end
 
+local function DisableCollision(part)
+    if part:IsA("BasePart") and part.CanCollide then
+        part.CanCollide = false
+        if not part:FindFirstChild("visiting_noCol") then
+            local b = Instance.new("BoolValue")
+            b.Name = "visiting_noCol"
+            b.Value = true
+            b.Parent = part
+        end
+    end
+end
+local function EnableCollision(part)
+    if part:IsA("BasePart") and part:FindFirstChild("visiting_noCol") then
+        part.CanCollide = true
+        pcall(function() part.visiting_noCol:Destroy() end)
+    end
+end
+
 local function EnableNoclip(state)
     if noclipConn then noclipConn:Disconnect() noclipConn = nil end
     if state then
         noclipConn = RunService.Stepped:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(11)
+            if LocalPlayer.Character then
+                for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        pcall(DisableCollision,v)
+                    end
+                end
             end
         end)
+    else
+        if LocalPlayer.Character then
+            for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    pcall(EnableCollision,v)
+                end
+            end
+        end
     end
 end
 
@@ -354,8 +398,19 @@ local function EnableInvisible(state)
     if LocalPlayer.Character then
         for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
             if v:IsA("BasePart") or v:IsA("Decal") then
-                v.Transparency = (state and 1 or 0)
-                if v:IsA("BasePart") then v.CanCollide = not state end
+                if state then
+                    if v:IsA("BasePart") then
+                        v.LocalTransparencyModifier = 1
+                    elseif v:IsA("Decal") then
+                        v.Transparency = 1
+                    end
+                else
+                    if v:IsA("BasePart") then
+                        v.LocalTransparencyModifier = 0
+                    elseif v:IsA("Decal") then
+                        v.Transparency = 0
+                    end
+                end
             end
         end
         lastInvisible = state
@@ -382,10 +437,13 @@ local function HandleToggles()
 end
 
 local MenuGuiName = "visitingmenu"
+local menuGuiObj = nil
 local function MakeMenu()
+    if menuGuiObj and menuGuiObj.Parent then menuGuiObj:Destroy() end
     for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name==MenuGuiName then pcall(function() g:Destroy() end) end end
     local gui = Instance.new("ScreenGui")
     gui.Name = MenuGuiName
+    menuGuiObj = gui
     ParentGui(gui)
     local fr = Instance.new("Frame",gui)
     fr.Size = UDim2.new(0,510,0,310)
@@ -417,11 +475,9 @@ local function MakeMenu()
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false end)
 
-    -- Satırların grid değerleri
-    local x_col = {0.03, 0.36, 0.69} -- sol-orta-sağ kolon X
+    local x_col = {0.03, 0.36, 0.69}
     local width = 150; local h_sp = 31; local y0 = 48
 
-    -- ESP
     local labels = {
         {"ESP Aktif", ESP, "enabled"},
         {"ESP Box", ESP, "box"},
@@ -466,7 +522,6 @@ local function MakeMenu()
         clrBtn.BackgroundColor3 = ESP.color
     end)
 
-    -- Aimbot
     local ab_row = 0
     local ab_active = Instance.new("TextButton", fr)
     ab_active.Size = UDim2.new(0,width,0,25)
@@ -548,7 +603,6 @@ local function MakeMenu()
         end
     end)
 
-    -- Extra
     local btn_data = {
         {"NoClip", Extra, "noclip"},
         {"Fly", Extra, "fly"},
@@ -573,7 +627,6 @@ local function MakeMenu()
         end)
     end
 
-    -- Extra ayarlar: Fly hızı
     local fLab = Instance.new("TextLabel",fr)
     fLab.Position = UDim2.new(x_col[3],0,0,y0+#btn_data*h_sp+3)
     fLab.Size = UDim2.new(0,74,0,18)
@@ -634,7 +687,6 @@ local function MakeMenu()
             end)
         end
     end)
-    --
     gui.Enabled = true
 end
 
@@ -702,8 +754,8 @@ end)
 
 UIS.InputBegan:Connect(function(inp,gp)
     if gp then return end
-    if inp.KeyCode == Enum.KeyCode.Insert then
-        local gui = game:GetService("CoreGui"):FindFirstChild(MenuGuiName)
+    if inp.KeyCode == Enum.KeyCode.F4 then
+        local gui = menuGuiObj or game:GetService("CoreGui"):FindFirstChild(MenuGuiName)
         if gui then gui.Enabled = not gui.Enabled else MakeMenu() end
     end
 end)
