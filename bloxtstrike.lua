@@ -40,6 +40,20 @@ local ESP, Aimbot = {
     target = nil
 }
 
+local Extra = {
+    noclip = false,
+    fly = false,
+    invisible = false,
+    spinbot = false
+}
+
+local noclipConn
+local flyConn
+local flySpeed = 4
+local flying = false
+local lastInvisible = false
+local spinConn
+
 local function IsEnemy(plr)
     if not plr or plr == LocalPlayer then return false end
     if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team and #game:GetService("Teams"):GetTeams() > 1 then return false end
@@ -280,6 +294,299 @@ if hookmetamethod and typeof(hookmetamethod)=="function" then
     end)
 end
 
+local function EnableNoclip(state)
+    if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+    if state then
+        noclipConn = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(11)
+            end
+        end)
+    end
+end
+
+local flyControls = {F=false,B=false,L=false,R=false,U=false,D=false}
+local function SetupFlyKeys()
+    UIS.InputBegan:Connect(function(i,gp)
+        if gp then return end
+        if i.KeyCode==Enum.KeyCode.W then flyControls.F=true end
+        if i.KeyCode==Enum.KeyCode.S then flyControls.B=true end
+        if i.KeyCode==Enum.KeyCode.A then flyControls.L=true end
+        if i.KeyCode==Enum.KeyCode.D then flyControls.R=true end
+        if i.KeyCode==Enum.KeyCode.Space then flyControls.U=true end
+        if i.KeyCode==Enum.KeyCode.LeftControl then flyControls.D=true end
+    end)
+    UIS.InputEnded:Connect(function(i,gp)
+        if gp then return end
+        if i.KeyCode==Enum.KeyCode.W then flyControls.F=false end
+        if i.KeyCode==Enum.KeyCode.S then flyControls.B=false end
+        if i.KeyCode==Enum.KeyCode.A then flyControls.L=false end
+        if i.KeyCode==Enum.KeyCode.D then flyControls.R=false end
+        if i.KeyCode==Enum.KeyCode.Space then flyControls.U=false end
+        if i.KeyCode==Enum.KeyCode.LeftControl then flyControls.D=false end
+    end)
+end
+SetupFlyKeys()
+
+local function EnableFly(state)
+    if flyConn then flyConn:Disconnect() flyConn = nil end
+    flying = state
+    if state then
+        flyConn = RunService.RenderStepped:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+                hrp.Velocity = Vector3.new(0,0,0)
+                local cam = workspace.CurrentCamera
+                local cf = cam.CFrame
+                local move = Vector3.new()
+                if flyControls.F then move = move + cf.LookVector end
+                if flyControls.B then move = move - cf.LookVector end
+                if flyControls.L then move = move - cf.RightVector end
+                if flyControls.R then move = move + cf.RightVector end
+                if flyControls.U then move = move + cf.UpVector end
+                if flyControls.D then move = move - cf.UpVector end
+                if move.Magnitude > 0 then move = move.Unit else move=Vector3.zero end
+                hrp.Velocity = move * flySpeed * 16
+            end
+        end)
+    end
+end
+
+local function EnableInvisible(state)
+    if LocalPlayer.Character then
+        for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") or v:IsA("Decal") then
+                v.Transparency = (state and 1 or 0)
+                if v:IsA("BasePart") then v.CanCollide = not state end
+            end
+        end
+        lastInvisible = state
+    end
+end
+
+local function EnableSpinbot(state)
+    if spinConn then spinConn:Disconnect() spinConn=nil end
+    if state then
+        spinConn = RunService.RenderStepped:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0,math.rad(32),0)
+            end
+        end)
+    end
+end
+
+local function HandleToggles()
+    EnableNoclip(Extra.noclip)
+    EnableFly(Extra.fly)
+    EnableInvisible(Extra.invisible)
+    EnableSpinbot(Extra.spinbot)
+end
+
+local MenuGuiName = "visitingmenu"
+local function MakeMenu()
+    for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name==MenuGuiName then pcall(function() g:Destroy() end) end end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = MenuGuiName
+    ParentGui(gui)
+    local fr = Instance.new("Frame",gui)
+    fr.Size = UDim2.new(0,500,0,367)
+    fr.Position = UDim2.new(0.30,0,0.13,0)
+    fr.BackgroundColor3 = Color3.fromRGB(20,27,36)
+    fr.BorderSizePixel = 0
+    fr.Active = true
+    fr.Draggable = true
+    local bar = Instance.new("Frame",fr)
+    bar.Size = UDim2.new(1,0,0,33)
+    bar.BackgroundColor3 = Color3.fromRGB(11,44,76)
+    bar.Position = UDim2.new(0,0,0,0)
+    local tx = Instance.new("TextLabel",bar)
+    tx.Text = "visitingmenu"
+    tx.Font = Enum.Font.GothamBlack
+    tx.TextColor3 = Color3.fromRGB(0,255,255)
+    tx.TextSize = 19
+    tx.Size = UDim2.new(1,0,1,0)
+    tx.BackgroundTransparency = 1
+    local close = Instance.new("TextButton",bar)
+    close.Text = "✕"
+    close.Font = Enum.Font.GothamBlack
+    close.TextColor3 = Color3.fromRGB(255,50,60)
+    close.TextSize = 16
+    close.Size = UDim2.new(0,30,0,28)
+    close.Position = UDim2.new(1,-36,0,3)
+    close.BackgroundColor3 = Color3.fromRGB(35,20,33)
+    close.BorderSizePixel = 0
+    close.MouseButton1Click:Connect(function() gui.Enabled = false end)
+
+    -- Bölümlerle ayrılmış menü
+    -- ESP Bölümü
+    local x0 = 0
+    local x1 = 0.34
+    local x2 = 0.68
+    local sx = 155
+    local sp = 31
+    local sy0 = 44
+    local yesp = sy0
+    local yaimbot = sy0
+    local yextra = sy0
+
+    local function Toggle(label, base, key, xpos, ypos, onChange)
+        local b = Instance.new("TextButton", fr)
+        b.Size = UDim2.new(0,sx,0,25)
+        b.Position = UDim2.new(xpos,0,0,ypos)
+        b.Text = label.." : "..(base[key] and "AÇIK" or "KAPALI")
+        b.BackgroundColor3 = base[key] and Color3.fromRGB(50,146,86) or Color3.fromRGB(35,32,58)
+        b.TextColor3 = Color3.fromRGB(255,255,255)
+        b.Font = Enum.Font.GothamSemibold
+        b.TextSize = 14
+        b.BorderSizePixel = 0
+        b.MouseButton1Click:Connect(function()
+            base[key] = not base[key]
+            b.Text = label.." : "..(base[key] and "AÇIK" or "KAPALI")
+            b.BackgroundColor3 = base[key] and Color3.fromRGB(50,146,86) or Color3.fromRGB(35,32,58)
+            if onChange then onChange(base[key]) end
+        end)
+        return b
+    end
+    local function Section(lbl, xpos, clr)
+        local t = Instance.new("TextLabel", fr)
+        t.Position = UDim2.new(xpos,0,0,33)
+        t.Size = UDim2.new(0,sx,0,13)
+        t.Text = lbl
+        t.TextColor3 = clr
+        t.Font = Enum.Font.GothamSemibold
+        t.TextSize = 13
+        t.BackgroundTransparency = 1
+    end
+
+    Section("ESP",x0, Color3.fromRGB(0,255,255))
+    Toggle("Aktif", ESP, "enabled", x0, yesp)
+    yesp = yesp+sp
+    Toggle("Box", ESP, "box", x0, yesp)
+    yesp = yesp+sp
+    Toggle("Mesafe", ESP, "distance", x0, yesp)
+    yesp = yesp+sp
+    Toggle("İsim", ESP, "name", x0, yesp)
+    yesp = yesp+sp
+    Toggle("İskelet", ESP, "skeleton", x0, yesp)
+    yesp = yesp+sp
+    Toggle("HeadCircle", ESP, "headcircle", x0, yesp)
+
+    local clrLab = Instance.new("TextLabel",fr)
+    clrLab.Size = UDim2.new(0,66,0,19)
+    clrLab.Position = UDim2.new(x0,15,0,yesp+3)
+    clrLab.Text = "Renk:"
+    clrLab.BackgroundTransparency = 1
+    clrLab.Font = Enum.Font.GothamSemibold
+    clrLab.TextColor3 = Color3.fromRGB(255,255,255)
+    clrLab.TextSize = 13
+    local clrBtn = Instance.new("TextButton",fr)
+    clrBtn.Size = UDim2.new(0,32,0,19)
+    clrBtn.Position = UDim2.new(x0,82,0,yesp+3)
+    clrBtn.Text = ""
+    clrBtn.BackgroundColor3 = ESP.color
+    clrBtn.BorderSizePixel = 0
+    clrBtn.MouseButton1Click:Connect(function()
+        local r,g,b = math.random(64,255), math.random(64,255), math.random(64,255)
+        ESP.color=Color3.fromRGB(r,g,b)
+        clrBtn.BackgroundColor3 = ESP.color
+    end)
+
+    Section("Aimbot",x1,Color3.fromRGB(0,255,160))
+    Toggle("Aktif",Aimbot,"enabled", x1, yaimbot)
+    yaimbot = yaimbot+sp
+    Toggle("Silent",Aimbot,"silent", x1, yaimbot)
+    yaimbot = yaimbot+sp
+
+    local tgLbl = Instance.new("TextLabel",fr)
+    tgLbl.Position = UDim2.new(x1,10,0,yaimbot)
+    tgLbl.Size = UDim2.new(0,60,0,18)
+    tgLbl.Text = "Hedef:"
+    tgLbl.Font = Enum.Font.GothamSemibold
+    tgLbl.TextColor3 = Color3.fromRGB(255,255,255)
+    tgLbl.TextSize = 12
+    tgLbl.BackgroundTransparency = 1
+    local modes = {"Head","Body","ClosestPart"}
+    local sel = Instance.new("TextButton",fr)
+    sel.Position = UDim2.new(x1,70,0,yaimbot)
+    sel.Size = UDim2.new(0,78,0,19)
+    sel.Text = Aimbot.targetmode
+    sel.BackgroundColor3 = Color3.fromRGB(36,64,96)
+    sel.TextColor3 = Color3.fromRGB(255,255,255)
+    sel.Font = Enum.Font.GothamSemibold
+    sel.BorderSizePixel = 0
+    sel.TextSize = 12
+    sel.MouseButton1Click:Connect(function()
+        local i = table.find(modes,Aimbot.targetmode) or 0
+        Aimbot.targetmode = modes[(i%#modes)+1]
+        sel.Text = Aimbot.targetmode
+    end)
+
+    yaimbot = yaimbot + 25
+    local fovLbl = Instance.new("TextLabel",fr)
+    fovLbl.Position = UDim2.new(x1,10,0,yaimbot)
+    fovLbl.Size = UDim2.new(0,23,0,17)
+    fovLbl.Text = "Fov"
+    fovLbl.Font = Enum.Font.GothamSemibold
+    fovLbl.TextColor3 = Color3.fromRGB(255,255,255)
+    fovLbl.TextSize = 12
+    fovLbl.BackgroundTransparency = 1
+    local fovBox = Instance.new("TextBox",fr)
+    fovBox.Position = UDim2.new(x1,40,0,yaimbot-1)
+    fovBox.Size = UDim2.new(0,40,0,19)
+    fovBox.Text = tostring(Aimbot.fov)
+    fovBox.BackgroundColor3 = Color3.fromRGB(40,37,62)
+    fovBox.TextColor3 = Color3.fromRGB(255,255,255)
+    fovBox.Font = Enum.Font.GothamSemibold
+    fovBox.BorderSizePixel = 0
+    fovBox.TextSize = 12
+    fovBox.ClearTextOnFocus = false
+    fovBox.FocusLost:Connect(function()
+        local v = tonumber(fovBox.Text)
+        if v and v <= 650 and v >= 10 then
+            Aimbot.fov = v
+        else
+            fovBox.Text = tostring(Aimbot.fov)
+        end
+    end)
+
+    -- Extra Bölümü
+    Section("Ekstra",x2,Color3.fromRGB(192,96,255))
+    Toggle("NoClip",Extra,"noclip",x2,yextra,function(v) HandleToggles() end)
+    yextra = yextra+sp
+    Toggle("Fly",Extra,"fly",x2,yextra,function(v) HandleToggles() end)
+    yextra = yextra+sp
+    Toggle("Görünmez",Extra,"invisible",x2,yextra,function(v) HandleToggles() end)
+    yextra = yextra+sp
+    Toggle("Spinbot",Extra,"spinbot",x2,yextra,function(v) HandleToggles() end)
+
+    local flyset = Instance.new("TextLabel", fr)
+    flyset.Position = UDim2.new(x2, 9, 0, yextra+17)
+    flyset.Size = UDim2.new(0, 125, 0, 16)
+    flyset.Text = "Fly hızı +/-(Numpad)"
+    flyset.TextSize = 12
+    flyset.Font = Enum.Font.GothamSemibold
+    flyset.BackgroundTransparency = 1
+    flyset.TextColor3 = Color3.fromRGB(192,96,255)
+    UIS.InputBegan:Connect(function(i,gp)
+        if gui.Enabled and Extra.fly then
+            if i.KeyCode==Enum.KeyCode.KeypadPlus then flySpeed = math.clamp(flySpeed+1,1,20) end
+            if i.KeyCode==Enum.KeyCode.KeypadMinus then flySpeed = math.clamp(flySpeed-1,1,20) end
+        end
+    end)
+
+    local ins = Instance.new("TextLabel",fr)
+    ins.Text = "Menü: Insert tuşu | discord.gg/nebula-hub"
+    ins.Font = Enum.Font.GothamSemibold
+    ins.TextColor3 = Color3.fromRGB(90,225,246)
+    ins.BackgroundTransparency = 1
+    ins.Position = UDim2.new(0.03,0,1,-22)
+    ins.Size = UDim2.new(0.93,0,0,18)
+    ins.TextSize = 13
+
+    gui.Enabled = true
+end
+
 local function ShowPassword(cb)
     for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name=="NBLX_PassWnd" then pcall(function() g:Destroy() end) end end
     local gui = Instance.new("ScreenGui")
@@ -317,7 +624,7 @@ local function ShowPassword(cb)
     info.Text = ""
     local btn = Instance.new("TextButton",fr)
     btn.Text = "GİR"
-    btn.Size = UDim2.new(0.32,0,0,22)
+    btn.Size = UDim2.new(0,60,0,22)
     btn.Position = UDim2.new(0.34,0,1,-32)
     btn.BackgroundColor3 = Color3.fromRGB(43,130,145)
     btn.Font = Enum.Font.GothamBlack
@@ -335,170 +642,6 @@ local function ShowPassword(cb)
     btn.MouseButton1Click:Connect(check)
     pass.FocusLost:Connect(function(enter) if enter then check() end end)
     UIS.InputBegan:Connect(function(inp,gp) if not gp and inp.KeyCode == Enum.KeyCode.Return then check() end end)
-    gui.Enabled = true
-end
-
-local MenuGuiName = "visitingmenu"
-local function MakeMenu()
-    for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name==MenuGuiName then pcall(function() g:Destroy() end) end end
-    local gui = Instance.new("ScreenGui")
-    gui.Name = MenuGuiName
-    ParentGui(gui)
-    local fr = Instance.new("Frame",gui)
-    fr.Size = UDim2.new(0,450,0,310)
-    fr.Position = UDim2.new(0.34,0,0.18,0)
-    fr.BackgroundColor3 = Color3.fromRGB(20,27,36)
-    fr.BorderSizePixel = 0
-    fr.Active = true
-    fr.Draggable = true
-    local bar = Instance.new("Frame",fr)
-    bar.Size = UDim2.new(1,0,0,33)
-    bar.BackgroundColor3 = Color3.fromRGB(11,44,76)
-    bar.Position = UDim2.new(0,0,0,0)
-    local tx = Instance.new("TextLabel",bar)
-    tx.Text = "visitingmenu"
-    tx.Font = Enum.Font.GothamBlack
-    tx.TextColor3 = Color3.fromRGB(0,255,255)
-    tx.TextSize = 17
-    tx.Size = UDim2.new(1,0,1,0)
-    tx.BackgroundTransparency = 1
-    local close = Instance.new("TextButton",bar)
-    close.Text = "✕"
-    close.Font = Enum.Font.GothamBlack
-    close.TextColor3 = Color3.fromRGB(255,50,60)
-    close.TextSize = 16
-    close.Size = UDim2.new(0,30,0,28)
-    close.Position = UDim2.new(1,-36,0,3)
-    close.BackgroundColor3 = Color3.fromRGB(35,20,33)
-    close.BorderSizePixel = 0
-    close.MouseButton1Click:Connect(function() gui.Enabled = false end)
-
-    local y = 44
-    local function Toggle(label, base, key, xpos)
-        local b = Instance.new("TextButton", fr)
-        b.Size = UDim2.new(0,156,0,25)
-        b.Position = UDim2.new(xpos,0,0,y)
-        b.Text = label.." : "..(base[key] and "AÇIK" or "KAPALI")
-        b.BackgroundColor3 = base[key] and Color3.fromRGB(50,146,86) or Color3.fromRGB(35,32,58)
-        b.TextColor3 = Color3.fromRGB(255,255,255)
-        b.Font = Enum.Font.GothamSemibold
-        b.TextSize = 14
-        b.BorderSizePixel = 0
-        b.MouseButton1Click:Connect(function()
-            base[key] = not base[key]
-            b.Text = label.." : "..(base[key] and "AÇIK" or "KAPALI")
-            b.BackgroundColor3 = base[key] and Color3.fromRGB(50,146,86) or Color3.fromRGB(35,32,58)
-        end)
-        y = y + 31
-        return b
-    end
-    local function Section(lbl, xpos, clr)
-        local t = Instance.new("TextLabel", fr)
-        t.Position = UDim2.new(xpos,0,0,33)
-        t.Size = UDim2.new(0,155,0,13)
-        t.Text = lbl
-        t.TextColor3 = clr
-        t.Font = Enum.Font.GothamSemibold
-        t.TextSize = 13
-        t.BackgroundTransparency = 1
-    end
-
-    Section("ESP",0, Color3.fromRGB(0,255,255))
-    y = 58
-    Toggle("Aktif", ESP, "enabled", 0)
-    Toggle("Box", ESP, "box", 0)
-    Toggle("Mesafe", ESP, "distance", 0)
-    Toggle("İsim", ESP, "name", 0)
-    Toggle("İskelet", ESP, "skeleton", 0)
-    Toggle("HeadCircle", ESP, "headcircle", 0)
-
-    local clrLab = Instance.new("TextLabel",fr)
-    clrLab.Size = UDim2.new(0,66,0,19)
-    clrLab.Position = UDim2.new(0,15,0,y+3)
-    clrLab.Text = "Renk:"
-    clrLab.BackgroundTransparency = 1
-    clrLab.Font = Enum.Font.GothamSemibold
-    clrLab.TextColor3 = Color3.fromRGB(255,255,255)
-    clrLab.TextSize = 13
-    local clrBtn = Instance.new("TextButton",fr)
-    clrBtn.Size = UDim2.new(0,32,0,19)
-    clrBtn.Position = UDim2.new(0,82,0,y+3)
-    clrBtn.Text = ""
-    clrBtn.BackgroundColor3 = ESP.color
-    clrBtn.BorderSizePixel = 0
-    clrBtn.MouseButton1Click:Connect(function()
-        local r,g,b = math.random(64,255), math.random(64,255), math.random(64,255)
-        ESP.color=Color3.fromRGB(r,g,b)
-        clrBtn.BackgroundColor3 = ESP.color
-    end)
-
-    local y2 = 58
-    Section("Aimbot",.58,Color3.fromRGB(0,255,160))
-    local Aimg = {}
-    Toggle("Aktif",Aimbot,"enabled", .58)
-    Aimg.silent = Toggle("Silent",Aimbot,"silent",.58)
-    y2 = y2 + 62
-
-    local tgLbl = Instance.new("TextLabel",fr)
-    tgLbl.Position = UDim2.new(.58,10,0,y2)
-    tgLbl.Size = UDim2.new(0,60,0,18)
-    tgLbl.Text = "Hedef:"
-    tgLbl.Font = Enum.Font.GothamSemibold
-    tgLbl.TextColor3 = Color3.fromRGB(255,255,255)
-    tgLbl.TextSize = 12
-    tgLbl.BackgroundTransparency = 1
-    local modes = {"Head","Body","ClosestPart"}
-    local sel = Instance.new("TextButton",fr)
-    sel.Position = UDim2.new(.58,70,0,y2)
-    sel.Size = UDim2.new(0,78,0,19)
-    sel.Text = Aimbot.targetmode
-    sel.BackgroundColor3 = Color3.fromRGB(36,64,96)
-    sel.TextColor3 = Color3.fromRGB(255,255,255)
-    sel.Font = Enum.Font.GothamSemibold
-    sel.BorderSizePixel = 0
-    sel.TextSize = 12
-    sel.MouseButton1Click:Connect(function()
-        local i = table.find(modes,Aimbot.targetmode) or 0
-        Aimbot.targetmode = modes[(i%#modes)+1]
-        sel.Text = Aimbot.targetmode
-    end)
-
-    local fovLbl = Instance.new("TextLabel",fr)
-    fovLbl.Position = UDim2.new(.58,10,0,y2+23)
-    fovLbl.Size = UDim2.new(0,23,0,17)
-    fovLbl.Text = "Fov"
-    fovLbl.Font = Enum.Font.GothamSemibold
-    fovLbl.TextColor3 = Color3.fromRGB(255,255,255)
-    fovLbl.TextSize = 12
-    fovLbl.BackgroundTransparency = 1
-    local fovBox = Instance.new("TextBox",fr)
-    fovBox.Position = UDim2.new(.58,40,0,y2+22)
-    fovBox.Size = UDim2.new(0,40,0,19)
-    fovBox.Text = tostring(Aimbot.fov)
-    fovBox.BackgroundColor3 = Color3.fromRGB(40,37,62)
-    fovBox.TextColor3 = Color3.fromRGB(255,255,255)
-    fovBox.Font = Enum.Font.GothamSemibold
-    fovBox.BorderSizePixel = 0
-    fovBox.TextSize = 12
-    fovBox.ClearTextOnFocus = false
-    fovBox.FocusLost:Connect(function()
-        local v = tonumber(fovBox.Text)
-        if v and v <= 650 and v >= 10 then
-            Aimbot.fov = v
-        else
-            fovBox.Text = tostring(Aimbot.fov)
-        end
-    end)
-
-    local ins = Instance.new("TextLabel",fr)
-    ins.Text = "Menü: Insert tuşu | discord.gg/nebula-hub"
-    ins.Font = Enum.Font.GothamSemibold
-    ins.TextColor3 = Color3.fromRGB(90,225,246)
-    ins.BackgroundTransparency = 1
-    ins.Position = UDim2.new(0.03,0,1,-22)
-    ins.Size = UDim2.new(0.93,0,0,18)
-    ins.TextSize = 13
-
     gui.Enabled = true
 end
 
