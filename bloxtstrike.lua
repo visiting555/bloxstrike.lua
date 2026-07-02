@@ -3,104 +3,55 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local function ParentGui(gui)
-    local goodParent = nil
+    local parentTarget
     if typeof(gethui) == "function" then
-        pcall(function()
-            local h = gethui()
-            if h and typeof(h)=="Instance" then goodParent = h end
-        end)
-    elseif typeof(syn) == "table" and syn and syn.protect_gui then
+        pcall(function() parentTarget = gethui() end)
+    end
+    if not parentTarget and syn and syn.protect_gui then
         syn.protect_gui(gui)
-        goodParent = game:GetService("CoreGui")
-    else
-        goodParent = game:GetService("CoreGui")
+        parentTarget = game:GetService("CoreGui")
     end
-    if not goodParent and LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
-        goodParent = LocalPlayer.PlayerGui
+    if not parentTarget and LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
+        parentTarget = LocalPlayer.PlayerGui
     end
-    if not goodParent then
-        goodParent = game:GetService("Players").LocalPlayer
+    if not parentTarget then
+        parentTarget = game:GetService("CoreGui")
     end
-    pcall(function() gui.Parent = goodParent end)
+    gui.Parent = parentTarget
 end
 
-setfflag = setfflag or function(...) end
 if setfflag then
     pcall(function()
         setfflag("AbuseReportScreenshot", "False")
         setfflag("AbuseReportScreenshotPercentage", "0")
         setfflag("CrashUploadToBacktraceToBacktraceToBacktrace", "False")
-        setfflag("DFStringCrashUploadToBacktraceLastSubmit", "")
         setfflag("CrashUploadToBacktracePercentage", "0")
         setfflag("CrashUploadToBacktraceLinux", "False")
         setfflag("CrashUploadToBacktraceAndroid", "False")
         setfflag("CrashUploadToBacktraceIOS", "False")
-        if setfflag and typeof(writefile)=="function" and typeof(readfile)=="function" then
-            local b = ({pcall(function() return getrenv() end)})
-            if b and typeof(b[2])=="table" then
-                for k,v in pairs(b[2]) do
-                    if typeof(v)=="function" and getfenv and rawequal(getfenv(v),getfenv(0)) then
-                        if debug and debug.info then
-                            local nm = debug.info(v,"s")
-                            if nm and (string.find(nm,"Anti") or string.find(nm,"anticheat") or string.find(nm,"Bypass") or string.find(nm,"Detected")) then
-                                setfenv(v,function() return end)
-                            end
-                        end
-                    end
-                end
-            end
-        end
     end)
 end
-
-for _,con in pairs(getconnections(game:GetService("LogService").MessageOut)) do
-    pcall(function() con:Disable() end)
-end
-for _,con in pairs(getconnections(game.DescendantAdded)) do
-    pcall(function() con:Disable() end)
-end
-for _,con in pairs(getconnections(game.DescendantRemoving)) do
-    pcall(function() con:Disable() end)
-end
-if setreadonly then
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    rawset(mt, "__newindex", function(...) return end)
-    setreadonly(mt, true)
-end
+for _,c in pairs(getconnections(game:GetService("LogService").MessageOut)) do pcall(function() c:Disable() end) end
+for _,c in pairs(getconnections(game.DescendantAdded)) do pcall(function() c:Disable() end) end
+for _,c in pairs(getconnections(game.DescendantRemoving)) do pcall(function() c:Disable() end) end
 
 local ESP, Aimbot = {
-    enabled = false,
-    box = false,
-    distance = false,
-    name = false,
-    skeleton = false,
-    headcircle = false,
+    enabled = false, box = false, distance = false, name = false, skeleton = false, headcircle = false,
     color = Color3.fromRGB(0,255,255)
 },{
-    enabled = false,
-    targetmode = "Head",
-    silent = false,
-    fov = 120,
-    target = nil
+    enabled = false, targetmode = "Head", silent = false, fov = 120, target = nil
 }
-
-local Extra = {
-    noclip = false,
-    fly = false,
-    invisible = false,
-    spinbot = false
-}
-
-local noclipConn
-local flyConn
+local Extra = { noclip=false, fly=false, invisible=false, spinbot=false }
 local flySpeed = 4
-local lastInvisible = false
-local spinConn
+
+local noclipConn, flyConn, spinConn
+local flyControls = {F=false,B=false,L=false,R=false,U=false,D=false}
+local MenuGuiName = "visitingmenu"
+local menuGuiObj
 
 local function IsEnemy(plr)
     if not plr or plr == LocalPlayer then return false end
-    if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team and #game:GetService("Teams"):GetTeams() > 1 then return false end
+    if LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team and #game:GetService("Teams"):GetTeams()>1 then return false end
     if plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
         and plr.Character:FindFirstChild("HumanoidRootPart")
         and plr.Character:FindFirstChild("Head")
@@ -109,7 +60,6 @@ local function IsEnemy(plr)
     end
     return false
 end
-
 local function GetEnemies()
     local arr = {}
     for _,p in ipairs(game:GetService("Players"):GetPlayers()) do
@@ -117,7 +67,6 @@ local function GetEnemies()
     end
     return arr
 end
-
 local function WorldToScreen(vec)
     local cam = workspace.CurrentCamera
     if not cam then return Vector3.zero, false end
@@ -127,7 +76,7 @@ end
 
 local drawings = setmetatable({}, {__mode = "k"})
 local function RemoveDraws()
-    for d,_ in next,drawings do
+    for d in pairs(drawings) do
         d.Visible = false
         if typeof(d.Remove)=="function" then d:Remove() elseif typeof(d.Destroy)=="function" then d:Destroy() end
         drawings[d] = nil
@@ -379,7 +328,6 @@ local function EnableNoclip(state)
     end
 end
 
-local flyControls = {F=false,B=false,L=false,R=false,U=false,D=false}
 local function SetupFlyKeys()
     UIS.InputBegan:Connect(function(i,gp)
         if gp then return end
@@ -426,17 +374,11 @@ local function EnableFly(state)
 end
 
 local function EnableInvisible(state)
-    -- Geliştirilmiş görünmezlik: karakterdeki tüm parçaların Transparency ayarları, MeshParts takma, ve yerel görünümü de kaldır
     if LocalPlayer.Character then
         for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.LocalTransparencyModifier = state and 1 or 0
                 v.Transparency = state and 1 or 0
-                -- MeshPart için Mesh'i de kontrol et
-                if v:IsA("MeshPart") and v:FindFirstChildOfClass("SpecialMesh") then
-                    local mesh = v:FindFirstChildOfClass("SpecialMesh")
-                    mesh.Transparency = state and 1 or 0
-                end
             elseif v:IsA("Decal") then
                 v.Transparency = state and 1 or 0
             elseif v:IsA("Accessory") then
@@ -465,7 +407,6 @@ local function EnableInvisible(state)
                 LocalPlayer.Character:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
             end
         end
-        lastInvisible = state
     end
 end
 
@@ -488,8 +429,6 @@ local function HandleToggles()
     EnableSpinbot(Extra.spinbot)
 end
 
-local MenuGuiName = "visitingmenu"
-local menuGuiObj = nil
 local function MakeMenu()
     if menuGuiObj and menuGuiObj.Parent then menuGuiObj:Destroy() end
     for _,g in ipairs(game.CoreGui:GetChildren()) do if g.Name==MenuGuiName then pcall(function() g:Destroy() end) end end
@@ -497,13 +436,12 @@ local function MakeMenu()
     gui.Name = MenuGuiName
     menuGuiObj = gui
     ParentGui(gui)
+
     local fr = Instance.new("Frame",gui)
-    fr.Size = UDim2.new(0,510,0,310)
-    fr.Position = UDim2.new(0.335,0,0.17,0)
+    fr.Size, fr.Position = UDim2.fromOffset(484,298), UDim2.new(0.32,0,0.18,0)
     fr.BackgroundColor3 = Color3.fromRGB(20,27,36)
     fr.BorderSizePixel = 0
-    fr.Active = true fr.Draggable = true
-
+    fr.Active, fr.Draggable = true, true
     local bar = Instance.new("Frame",fr)
     bar.Size = UDim2.new(1,0,0,33)
     bar.BackgroundColor3 = Color3.fromRGB(11,44,76)
@@ -512,111 +450,84 @@ local function MakeMenu()
     tx.Text = "visitingmenu"
     tx.Font = Enum.Font.GothamBlack
     tx.TextColor3 = Color3.fromRGB(0,255,255)
-    tx.TextSize = 19
+    tx.TextSize = 20
     tx.Size = UDim2.new(1,0,1,0)
     tx.BackgroundTransparency = 1
 
     local close = Instance.new("TextButton",bar)
-    close.Text = "✕"
+    close.Text = "X"
     close.Font = Enum.Font.GothamBlack
-    close.TextColor3 = Color3.fromRGB(255,50,60)
+    close.TextColor3 = Color3.fromRGB(255,60,60)
     close.TextSize = 16
-    close.Size = UDim2.new(0,30,0,28)
+    close.Size = UDim2.new(0,31,0,28)
     close.Position = UDim2.new(1,-36,0,3)
     close.BackgroundColor3 = Color3.fromRGB(33,22,18)
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui.Enabled = false end)
 
-    local x_col = {0.03, 0.36, 0.69}
-    local width = 150; local h_sp = 31; local y0 = 48
+    local yFrm, xFrm = 45, {ESP=0.03, Aimbot=0.355, Ex=0.68}
+    local spacing = 29
 
-    local labels = {
-        {"ESP Aktif", ESP, "enabled"},
-        {"ESP Box", ESP, "box"},
-        {"ESP Mesafe", ESP, "distance"},
-        {"ESP İsim", ESP, "name"},
-        {"ESP İskelet", ESP, "skeleton"},
-        {"ESP HeadCircle", ESP, "headcircle"}
-    }
-    for row,l in ipairs(labels) do
+    local function button(xx,yy,width,text,param,field,onToggle)
         local b = Instance.new("TextButton", fr)
-        b.Size = UDim2.new(0,width,0,25)
-        b.Position = UDim2.new(x_col[1],0,0,y0+(row-1)*h_sp)
-        b.Text = l[1].." : "..(l[2][l[3]] and "AÇIK" or "KAPALI")
-        b.BackgroundColor3 = l[2][l[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+        b.Size = UDim2.new(0,width,0,24)
+        b.Position = UDim2.new(xx,0,0,yy)
+        b.Text = text.." : "..(param[field] and "AÇIK" or "KAPALI")
+        b.BackgroundColor3 = param[field] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
         b.TextColor3 = Color3.fromRGB(255,255,255)
         b.Font = Enum.Font.GothamSemibold
         b.TextSize = 14
         b.BorderSizePixel = 0
         b.MouseButton1Click:Connect(function()
-            l[2][l[3]] = not l[2][l[3]]
-            b.Text = l[1].." : "..(l[2][l[3]] and "AÇIK" or "KAPALI")
-            b.BackgroundColor3 = l[2][l[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+            param[field] = not param[field]
+            b.Text = text.." : "..(param[field] and "AÇIK" or "KAPALI")
+            b.BackgroundColor3 = param[field] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
+            if onToggle then onToggle() end
         end)
     end
+
+    button(xFrm.ESP, yFrm, 140, "ESP Aktif", ESP, "enabled")
+    button(xFrm.ESP, yFrm+spacing, 140, "ESP Box", ESP, "box")
+    button(xFrm.ESP, yFrm+spacing*2, 140, "Mesafe", ESP, "distance")
+    button(xFrm.ESP, yFrm+spacing*3, 140, "İsim", ESP, "name")
+    button(xFrm.ESP, yFrm+spacing*4, 140, "İskelet", ESP, "skeleton")
+    button(xFrm.ESP, yFrm+spacing*5, 140, "HeadCircle", ESP, "headcircle")
+
     local clrLab = Instance.new("TextLabel",fr)
-    clrLab.Size = UDim2.new(0,50,0,18)
-    clrLab.Position = UDim2.new(x_col[1],10,0,y0+#labels*h_sp)
+    clrLab.Size = UDim2.new(0,50,0,17)
+    clrLab.Position = UDim2.new(xFrm.ESP,10,0,yFrm+spacing*6+2)
     clrLab.Text = "Renk:"
     clrLab.BackgroundTransparency = 1
     clrLab.Font = Enum.Font.GothamSemibold
     clrLab.TextColor3 = Color3.fromRGB(255,255,255)
     clrLab.TextSize = 13
     local clrBtn = Instance.new("TextButton",fr)
-    clrBtn.Size = UDim2.new(0,32,0,18)
-    clrBtn.Position = UDim2.new(x_col[1],68,0,y0+#labels*h_sp)
+    clrBtn.Size = UDim2.new(0,29,0,17)
+    clrBtn.Position = UDim2.new(xFrm.ESP,68,0,yFrm+spacing*6+2)
     clrBtn.Text = ""
     clrBtn.BackgroundColor3 = ESP.color
     clrBtn.BorderSizePixel = 0
     clrBtn.MouseButton1Click:Connect(function()
-        local r,g,b = math.random(64,255), math.random(64,255), math.random(64,255)
+        local r,g,b = math.random(60,255), math.random(60,255), math.random(60,255)
         ESP.color=Color3.fromRGB(r,g,b)
         clrBtn.BackgroundColor3 = ESP.color
     end)
 
-    local ab_row = 0
-    local ab_active = Instance.new("TextButton", fr)
-    ab_active.Size = UDim2.new(0,width,0,25)
-    ab_active.Position = UDim2.new(x_col[2],0,0,y0+ab_row*h_sp)
-    ab_active.Text = "Aimbot : "..(Aimbot.enabled and "AÇIK" or "KAPALI")
-    ab_active.BackgroundColor3 = Aimbot.enabled and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
-    ab_active.TextColor3 = Color3.fromRGB(255,255,255)
-    ab_active.Font = Enum.Font.GothamSemibold
-    ab_active.TextSize = 14 ab_active.BorderSizePixel = 0
-    ab_active.MouseButton1Click:Connect(function()
-        Aimbot.enabled = not Aimbot.enabled
-        ab_active.Text = "Aimbot : "..(Aimbot.enabled and "AÇIK" or "KAPALI")
-        ab_active.BackgroundColor3 = Aimbot.enabled and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
-    end)
-    ab_row = ab_row+1
-
-    local ab_sil = Instance.new("TextButton", fr)
-    ab_sil.Size = UDim2.new(0,width,0,25)
-    ab_sil.Position = UDim2.new(x_col[2],0,0,y0+ab_row*h_sp)
-    ab_sil.Text = "SilentAim : "..(Aimbot.silent and "AÇIK" or "KAPALI")
-    ab_sil.BackgroundColor3 = Aimbot.silent and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
-    ab_sil.TextColor3 = Color3.fromRGB(255,255,255)
-    ab_sil.Font = Enum.Font.GothamSemibold
-    ab_sil.TextSize = 14 ab_sil.BorderSizePixel = 0
-    ab_sil.MouseButton1Click:Connect(function()
-        Aimbot.silent = not Aimbot.silent
-        ab_sil.Text = "SilentAim : "..(Aimbot.silent and "AÇIK" or "KAPALI")
-        ab_sil.BackgroundColor3 = Aimbot.silent and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
-    end)
-    ab_row = ab_row+1
+    button(xFrm.Aimbot, yFrm, 140, "Aimbot", Aimbot, "enabled")
+    button(xFrm.Aimbot, yFrm+spacing, 140, "SilentAim", Aimbot, "silent")
 
     local modes = {"Head","Body","ClosestPart"}
     local ab_mlbl = Instance.new("TextLabel", fr)
-    ab_mlbl.Position = UDim2.new(x_col[2],1,0,y0+ab_row*h_sp+3)
-    ab_mlbl.Size = UDim2.new(0,60,0,18)
+    ab_mlbl.Position = UDim2.new(xFrm.Aimbot,1,0,yFrm+spacing*2+3)
+    ab_mlbl.Size = UDim2.new(0,60,0,17)
     ab_mlbl.Text = "Hedef:"
     ab_mlbl.Font = Enum.Font.GothamSemibold
     ab_mlbl.TextColor3 = Color3.fromRGB(255,255,255)
     ab_mlbl.TextSize = 13 ab_mlbl.BackgroundTransparency = 1
 
     local ab_mode = Instance.new("TextButton", fr)
-    ab_mode.Position = UDim2.new(x_col[2],64,0,y0+ab_row*h_sp+1)
-    ab_mode.Size = UDim2.new(0,82,0,19)
+    ab_mode.Position = UDim2.new(xFrm.Aimbot,64,0,yFrm+spacing*2+1)
+    ab_mode.Size = UDim2.new(0,70,0,18)
     ab_mode.Text = Aimbot.targetmode
     ab_mode.BackgroundColor3 = Color3.fromRGB(36,64,96)
     ab_mode.TextColor3 = Color3.fromRGB(255,255,255)
@@ -626,19 +537,18 @@ local function MakeMenu()
         Aimbot.targetmode = modes[(i%#modes)+1]
         ab_mode.Text = Aimbot.targetmode
     end)
-    ab_row = ab_row + 1
 
     local fovLbl = Instance.new("TextLabel",fr)
-    fovLbl.Position = UDim2.new(x_col[2],1,0,y0+ab_row*h_sp+3)
-    fovLbl.Size = UDim2.new(0,23,0,18)
+    fovLbl.Position = UDim2.new(xFrm.Aimbot,1,0,yFrm+spacing*3+3)
+    fovLbl.Size = UDim2.new(0,23,0,17)
     fovLbl.Text = "Fov:"
     fovLbl.Font = Enum.Font.GothamSemibold
     fovLbl.TextColor3 = Color3.fromRGB(255,255,255)
     fovLbl.TextSize = 13 fovLbl.BackgroundTransparency = 1
 
     local fovBox = Instance.new("TextBox",fr)
-    fovBox.Position = UDim2.new(x_col[2],40,0,y0+ab_row*h_sp+1)
-    fovBox.Size = UDim2.new(0,45,0,19)
+    fovBox.Position = UDim2.new(xFrm.Aimbot,40,0,yFrm+spacing*3+1)
+    fovBox.Size = UDim2.new(0,45,0,18)
     fovBox.Text = tostring(Aimbot.fov)
     fovBox.BackgroundColor3 = Color3.fromRGB(38,37,62)
     fovBox.TextColor3 = Color3.fromRGB(255,255,255)
@@ -655,54 +565,34 @@ local function MakeMenu()
         end
     end)
 
-    local btn_data = {
-        {"NoClip", Extra, "noclip"},
-        {"Fly", Extra, "fly"},
-        {"Görünmez", Extra, "invisible"},
-        {"Spinbot", Extra, "spinbot"}
-    }
-    for idx,ed in ipairs(btn_data) do
-        local ex_btn = Instance.new("TextButton", fr)
-        ex_btn.Size = UDim2.new(0,width,0,25)
-        ex_btn.Position = UDim2.new(x_col[3],0,0,y0+(idx-1)*h_sp)
-        ex_btn.Text = ed[1].." : "..(ed[2][ed[3]] and "AÇIK" or "KAPALI")
-        ex_btn.BackgroundColor3 = ed[2][ed[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
-        ex_btn.TextColor3 = Color3.fromRGB(255,255,255)
-        ex_btn.Font = Enum.Font.GothamSemibold
-        ex_btn.TextSize = 14
-        ex_btn.BorderSizePixel = 0
-        ex_btn.MouseButton1Click:Connect(function()
-            ed[2][ed[3]] = not ed[2][ed[3]]
-            ex_btn.Text = ed[1].." : "..(ed[2][ed[3]] and "AÇIK" or "KAPALI")
-            ex_btn.BackgroundColor3 = ed[2][ed[3]] and Color3.fromRGB(60,182,96) or Color3.fromRGB(36,41,68)
-            HandleToggles()
-        end)
-    end
+    button(xFrm.Ex, yFrm, 128, "NoClip", Extra, "noclip", HandleToggles)
+    button(xFrm.Ex, yFrm+spacing, 128, "Fly", Extra, "fly", HandleToggles)
+    button(xFrm.Ex, yFrm+spacing*2, 128, "Görünmez", Extra, "invisible", HandleToggles)
+    button(xFrm.Ex, yFrm+spacing*3, 128, "Spinbot", Extra, "spinbot", HandleToggles)
 
     local fLab = Instance.new("TextLabel",fr)
-    fLab.Position = UDim2.new(x_col[3],0,0,y0+#btn_data*h_sp+3)
-    fLab.Size = UDim2.new(0,74,0,18)
-    fLab.Text = "Fly Hızı:"
+    fLab.Position = UDim2.new(xFrm.Ex,0,0,yFrm+spacing*4+1)
+    fLab.Size = UDim2.new(0,63,0,16)
+    fLab.Text = "Fly Hızı"
     fLab.Font = Enum.Font.GothamSemibold
     fLab.TextColor3 = Color3.fromRGB(255,255,255)
     fLab.TextSize = 13 fLab.BackgroundTransparency = 1
 
     local flySliderF = Instance.new("Frame", fr)
-    flySliderF.Position = UDim2.new(x_col[3],74,0,y0+#btn_data*h_sp+8)
-    flySliderF.Size = UDim2.new(0,63,0,8)
+    flySliderF.Position = UDim2.new(xFrm.Ex,63,0,yFrm+spacing*4+5)
+    flySliderF.Size = UDim2.new(0,56,0,8)
     flySliderF.BackgroundColor3 = Color3.fromRGB(60,60,60)
     flySliderF.BorderSizePixel = 0
     local Sknob = Instance.new("Frame", flySliderF)
-    Sknob.Size = UDim2.new(0,11,1,0)
+    Sknob.Size = UDim2.new(0,10,1,0)
     Sknob.Position = UDim2.new((flySpeed-1)/19,0,0,0)
     Sknob.BackgroundColor3 = Color3.fromRGB(0,255,255)
     Sknob.BorderSizePixel = 0
-    Sknob.Active = true
-    Sknob.Draggable = true
+    Sknob.Active, Sknob.Draggable = true, true
 
     local flyval = Instance.new("TextBox", fr)
-    flyval.Position = UDim2.new(x_col[3],145,0,y0+#btn_data*h_sp)
-    flyval.Size = UDim2.new(0,40,0,17)
+    flyval.Position = UDim2.new(xFrm.Ex,125,0,yFrm+spacing*4)
+    flyval.Size = UDim2.new(0,33,0,16)
     flyval.Text = tostring(flySpeed)
     flyval.BackgroundColor3 = Color3.fromRGB(38,37,62)
     flyval.TextColor3 = Color3.fromRGB(255,255,255)
@@ -714,12 +604,9 @@ local function MakeMenu()
         local v = tonumber(flyval.Text)
         if v and v >= 1 and v <= 20 then
             flySpeed = v
-        else
-            flyval.Text = tostring(flySpeed)
-        end
+        else flyval.Text = tostring(flySpeed) end
         Sknob.Position = UDim2.new((flySpeed-1)/19,0,0,0)
     end)
-
     Sknob.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then
             local ucon, rend
